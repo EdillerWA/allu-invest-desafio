@@ -13,6 +13,7 @@ import {
   MotivoRejeicaoObrigatorioError,
   NotaForaDoIntervaloError,
   LimiteDeAnexosExcedidoError,
+  VersaoDePoliticaInvalidaError,
 } from '../errors/avaliacao.errors';
 
 function criarAnexoDeTeste(nomeOriginal = 'comprovante.pdf'): Anexo {
@@ -87,6 +88,39 @@ describe('Avaliacao', () => {
         avaliacao.definirNota(TipoCriterio.CLAREZA_INFORMACOES, 3),
       ).toThrow(TransicaoInvalidaError);
     });
+
+    it('get notas() retorna uma copia nova a cada chamada, nao a referencia interna', () => {
+      const avaliacao = criarAvaliacaoDeTeste();
+      avaliacao.definirNota(TipoCriterio.ATENDIMENTO, 5);
+
+      expect(avaliacao.notas).not.toBe(avaliacao.notas);
+      expect(avaliacao.notas.size).toBe(1);
+    });
+  });
+
+  describe('aceitarPolitica', () => {
+    it('aceita uma versao valida', () => {
+      const avaliacao = criarAvaliacaoDeTeste();
+      avaliacao.aceitarPolitica('v1.2');
+
+      expect(avaliacao.aceitePolitica?.obterVersao()).toBe('v1.2');
+    });
+
+    it('rejeita versao vazia', () => {
+      const avaliacao = criarAvaliacaoDeTeste();
+
+      expect(() => avaliacao.aceitarPolitica('')).toThrow(
+        VersaoDePoliticaInvalidaError,
+      );
+    });
+
+    it('rejeita versao só com espaços', () => {
+      const avaliacao = criarAvaliacaoDeTeste();
+
+      expect(() => avaliacao.aceitarPolitica('   ')).toThrow(
+        VersaoDePoliticaInvalidaError,
+      );
+    });
   });
 
   describe('adicionarAnexo', () => {
@@ -120,13 +154,11 @@ describe('Avaliacao', () => {
       ).toThrow(LimiteDeAnexosExcedidoError);
     });
 
-    it('get anexos() retorna copia — alterar o array retornado nao afeta o estado interno', () => {
+    it('get anexos() retorna uma copia nova a cada chamada, nao a referencia interna', () => {
       const avaliacao = criarAvaliacaoDeTeste();
       avaliacao.adicionarAnexo(criarAnexoDeTeste());
 
-      const anexosRetornados = avaliacao.anexos as Anexo[];
-      anexosRetornados.push(criarAnexoDeTeste('intruso.pdf'));
-
+      expect(avaliacao.anexos).not.toBe(avaliacao.anexos);
       expect(avaliacao.anexos).toHaveLength(1);
     });
   });

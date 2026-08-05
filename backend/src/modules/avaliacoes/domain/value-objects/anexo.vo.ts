@@ -23,7 +23,11 @@ export class Anexo {
   }
 
   static criar(props: PropsAnexo): Anexo {
-    if (props.tamanhoBytes <= 0 || props.tamanhoBytes > TAMANHO_MAXIMO_BYTES) {
+    if (
+      !Number.isInteger(props.tamanhoBytes) ||
+      props.tamanhoBytes <= 0 ||
+      props.tamanhoBytes > TAMANHO_MAXIMO_BYTES
+    ) {
       throw new TamanhoDeAnexoInvalidoError(props.tamanhoBytes);
     }
     return new Anexo(props);

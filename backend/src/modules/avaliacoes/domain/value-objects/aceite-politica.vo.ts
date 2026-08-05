@@ -1,3 +1,5 @@
+import { VersaoDePoliticaInvalidaError } from '../errors/avaliacao.errors';
+
 export class AceitePolitica {
   private constructor(
     private readonly versao: string,
@@ -5,6 +7,9 @@ export class AceitePolitica {
   ) {}
 
   static criar(versao: string): AceitePolitica {
+    if (!versao || versao.trim().length === 0) {
+      throw new VersaoDePoliticaInvalidaError();
+    }
     return new AceitePolitica(versao, new Date());
   }
 

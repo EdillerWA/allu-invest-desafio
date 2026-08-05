@@ -229,7 +229,7 @@ export class Avaliacao extends AggregateRoot {
   }
 
   get notas(): ReadonlyMap<TipoCriterio, Nota> {
-    return this.props.notas;
+    return new Map(this.props.notas);
   }
 
   get anexos(): readonly Anexo[] {

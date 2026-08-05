@@ -76,3 +76,11 @@ export class TamanhoDeAnexoInvalidoError extends DomainError {
     );
   }
 }
+
+export class VersaoDePoliticaInvalidaError extends DomainError {
+  readonly code = 'VERSAO_DE_POLITICA_INVALIDA';
+
+  constructor() {
+    super('A versao da politica aceita nao pode ser vazia.');
+  }
+}

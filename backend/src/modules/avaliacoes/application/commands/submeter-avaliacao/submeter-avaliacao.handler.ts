@@ -6,20 +6,10 @@ import { InvestimentoGatewayPort } from '@modules/investimentos/application/port
 import { Avaliacao } from '@modules/avaliacoes/domain/entities/avaliacao.entity';
 import { SubmeterAvaliacaoCommand } from './submeter-avaliacao.command';
 import { traduzirMotivoEncerramento } from '../../mappers/motivo-encerramento.mapper';
-
-export class InvestimentoNaoEncontradoError extends Error {
-  constructor(investimentoId: string) {
-    super(`Investimento ${investimentoId} nao encontrado ou nao encerrado.`);
-    this.name = 'InvestimentoNaoEncontradoError';
-  }
-}
-
-export class InvestimentoNaoPertenceAoClienteError extends Error {
-  constructor() {
-    super('Este investimento nao pertence ao cliente autenticado.');
-    this.name = 'InvestimentoNaoPertenceAoClienteError';
-  }
-}
+import {
+  InvestimentoNaoEncontradoError,
+  InvestimentoNaoPertenceAoClienteError,
+} from '../../errors/orquestracao.errors';
 
 @Injectable()
 export class SubmeterAvaliacaoHandler {

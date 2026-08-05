@@ -41,5 +41,17 @@ describe('Anexo', () => {
         TamanhoDeAnexoInvalidoError,
       );
     });
+
+    it('rejeita tamanho NaN', () => {
+      expect(() => Anexo.criar(propsValidas(NaN))).toThrow(
+        TamanhoDeAnexoInvalidoError,
+      );
+    });
+
+    it('rejeita tamanho fracionario', () => {
+      expect(() => Anexo.criar(propsValidas(100.5))).toThrow(
+        TamanhoDeAnexoInvalidoError,
+      );
+    });
   });
 });

@@ -1,5 +1,6 @@
 import { MotivoEncerramento } from '@modules/avaliacoes/domain/entities/avaliacao.entity';
 import { MotivoEncerramentoExterno } from '@modules/investimentos/application/ports/investimento-gateway.port';
+import { MotivoEncerramentoDesconhecidoError } from '../errors/orquestracao.errors';
 
 const MAPA_MOTIVO_ENCERRAMENTO: Record<
   MotivoEncerramentoExterno,
@@ -20,9 +21,7 @@ export function traduzirMotivoEncerramento(
   const traduzido = MAPA_MOTIVO_ENCERRAMENTO[valorExterno];
 
   if (!traduzido) {
-    throw new Error(
-      `Motivo de encerramento desconhecido recebido do sistema externo: ${valorExterno}`,
-    );
+    throw new MotivoEncerramentoDesconhecidoError(valorExterno);
   }
 
   return traduzido;
