@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { validateEnv } from './config/env.validation';
-
+import { IdentityModule } from './modules/identity/identity.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -17,8 +17,19 @@ import { validateEnv } from './config/env.validation';
       delimiter: '.',
       global: true,
     }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 10,
+      },
+    ]),
+    IdentityModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
