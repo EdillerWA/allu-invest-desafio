@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum StatusAvaliacao {
+  RASCUNHO
+  ENVIADA
+  EM_MODERACAO
+  APROVADA
+  REJEITADA
+}
+
+enum RoleUsuario {
+  CLIENTE
+  MODERADOR
+}
+
+enum TipoCriterio {
+  ATENDIMENTO
+  CLAREZA_INFORMACOES
+  FACILIDADE_RESGATE
+  RENTABILIDADE_PERCEBIDA
+  RECOMENDARIA_A_OUTROS
+}
+
+enum MotivoEncerramento {
+  VENCIMENTO
+  RESGATE_ANTECIPADO
+  OUTRO
+}
+
+enum AcaoAuditoria {
+  CONVITE_GERADO
+  AVALIACAO_SUBMETIDA
+  ENVIADA_PARA_MODERACAO
+  APROVADA
+  REJEITADA
+  ANEXO_ADICIONADO
+}
+
+model Avaliacao {
+  id String @id @default(uuid())
+
+  investimentoId String @unique
+  clienteId      String
+
+  investimentoTipoProduto        String
+  investimentoValorAplicado      Decimal            @db.Decimal(18, 2)
+  investimentoDataAplicacao      DateTime
+  investimentoDataEncerramento   DateTime
+  investimentoMotivoEncerramento MotivoEncerramento
+
+  status StatusAvaliacao @default(RASCUNHO)
+
+  comentario String? @db.Text
+
+  politicaVersaoAceita String
+  politicaAceitaEm     DateTime?
+
+  idempotencyKey String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  notas     NotaCriterio[]
+  anexos    Anexo[]
+  auditLogs AuditLogAvaliacao[]
+
+  @@index([clienteId])
+  @@index([status])
+  @@map("avaliacoes")
+}
+
+model NotaCriterio {
+  id          String    @id @default(uuid())
+  avaliacaoId String
+  avaliacao   Avaliacao @relation(fields: [avaliacaoId], references: [id], onDelete: Cascade)
+
+  criterio TipoCriterio
+  nota     Int
+
+  @@unique([avaliacaoId, criterio])
+  @@map("notas_criterio")
+}
+
+model Anexo {
+  id          String    @id @default(uuid())
+  avaliacaoId String
+  avaliacao   Avaliacao @relation(fields: [avaliacaoId], references: [id], onDelete: Cascade)
+
+  nomeOriginal         String
+  caminhoArmazenamento String
+  tipoMime             String
+  tamanhoBytes         Int
+
+  criadoEm DateTime @default(now())
+
+  @@map("anexos")
+}
+
+model AuditLogAvaliacao {
+  id          String    @id @default(uuid())
+  avaliacaoId String
+  avaliacao   Avaliacao @relation(fields: [avaliacaoId], references: [id], onDelete: Cascade)
+  acao AcaoAuditoria
+  atorId   String?
+  atorRole RoleUsuario?
+  motivo String? @db.Text
+  metadata Json?
+  criadoEm DateTime @default(now())
+
+  @@index([avaliacaoId])
+  @@map("audit_log_avaliacoes")
+}
