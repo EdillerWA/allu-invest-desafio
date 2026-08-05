@@ -92,7 +92,7 @@ describe('ObterAvaliacaoHandler', () => {
     });
 
     // Os dois caminhos ("nao existe" e "existe mas nao e sua") precisam
-    // convergir pro mesmo tipo de erro — e' isso que garante que o
+    // convergir pro mesmo tipo de erro — e isso que garante que o
     // controller (Modulo 4) sempre responda 404, nunca 403, sem vazar pra
     // um atacante se aquele ID de avaliacao existe ou nao.
     await expect(

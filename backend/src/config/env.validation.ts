@@ -26,6 +26,9 @@ class EnvironmentVariables {
   DATABASE_URL!: string;
 
   @IsString()
+  RUNTIME_DATABASE_URL!: string;
+
+  @IsString()
   FILE_STORAGE_PATH!: string;
 
   @IsString()

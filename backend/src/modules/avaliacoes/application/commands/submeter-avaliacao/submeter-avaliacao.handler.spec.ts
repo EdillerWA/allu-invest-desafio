@@ -1,4 +1,5 @@
 import { DomainEvent } from '@shared/domain/domain-event';
+import { Prisma } from '@shared/infrastructure/prisma/prisma-client';
 import { InvestimentoEncerrado } from '@modules/investimentos/application/ports/investimento-gateway.port';
 import {
   Avaliacao,
@@ -9,6 +10,7 @@ import {
 import { SubmeterAvaliacaoHandler } from './submeter-avaliacao.handler';
 import { SubmeterAvaliacaoCommand } from './submeter-avaliacao.command';
 import {
+  IdempotencyKeyEmUsoError,
   InvestimentoNaoEncontradoError,
   InvestimentoNaoPertenceAoClienteError,
 } from '../../errors/orquestracao.errors';
@@ -180,5 +182,41 @@ describe('SubmeterAvaliacaoHandler', () => {
     await expect(
       handler.executar(criarCommand({ clienteId: 'cliente-1' })),
     ).rejects.toThrow(InvestimentoNaoPertenceAoClienteError);
+  });
+
+  it('idempotencyKey ja usada por OUTRO cliente: reconciliacao pos-P2002 nao acha a linha (RLS filtra por nao ser do dono) e lanca IdempotencyKeyEmUsoError, nao o erro cru do Prisma', async () => {
+    const repository = criarRepositoryMock();
+    const eventPublisher = criarEventPublisherMock();
+    const investimentoGateway = criarInvestimentoGatewayMock();
+
+    // Checagem inicial de idempotencia: RLS ja filtra a linha do outro
+    // cliente, entao "nao existe" do ponto de vista deste cliente.
+    repository.buscarPorIdempotencyKey.mockResolvedValueOnce(null);
+    repository.buscarPorInvestimentoId.mockResolvedValue(null);
+    investimentoGateway.buscarInvestimentoEncerrado.mockResolvedValue(
+      criarInvestimentoFixture(),
+    );
+    repository.salvar.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint failed on the fields: (`idempotencyKey`)',
+        { code: 'P2002', clientVersion: '7.9.1' },
+      ),
+    );
+    // Reconciliacao apos o P2002: mesma chave, mesmo motivo (RLS filtra
+    // por nao ser a linha deste cliente) — continua null.
+    repository.buscarPorIdempotencyKey.mockResolvedValueOnce(null);
+
+    const handler = new SubmeterAvaliacaoHandler(
+      repository,
+      eventPublisher,
+      investimentoGateway,
+    );
+
+    await expect(
+      handler.executar(
+        criarCommand({ idempotencyKey: 'chave-de-outro-cliente' }),
+      ),
+    ).rejects.toThrow(IdempotencyKeyEmUsoError);
+    expect(repository.buscarPorIdempotencyKey).toHaveBeenCalledTimes(2);
   });
 });

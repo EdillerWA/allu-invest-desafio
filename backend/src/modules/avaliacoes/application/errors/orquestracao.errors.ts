@@ -46,3 +46,19 @@ export class AvaliacaoNaoEncontradaError extends ApplicationError {
     super(`Avaliacao ${avaliacaoId} nao encontrada.`);
   }
 }
+
+// Ocorre quando a constraint unica de idempotencyKey (global no banco, nao
+// por cliente) e violada por uma chave que ja pertence a OUTRO cliente — o
+// RLS entao filtra a linha na reconsulta de reconciliacao (o dono da linha
+// nao e quem esta pedindo), entao o handler nao consegue devolver a
+// avaliacao existente como faria numa corrida legitima do mesmo cliente.
+// Mapeamento HTTP correto no Modulo 4: 409 (Conflict) — nao 404 (a chave
+// existe, so nao pertence a este cliente), nao 400 (nao e erro de
+// validacao de payload), nao 500 (nao e falha de infraestrutura).
+export class IdempotencyKeyEmUsoError extends ApplicationError {
+  readonly code = 'IDEMPOTENCY_KEY_EM_USO';
+
+  constructor() {
+    super('Esta chave de idempotencia ja esta em uso por outra avaliacao.');
+  }
+}

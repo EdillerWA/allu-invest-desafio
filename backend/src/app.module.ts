@@ -5,6 +5,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { validateEnv } from './config/env.validation';
 import { IdentityModule } from './modules/identity/identity.module';
+import { AvaliacoesModule } from './modules/avaliacoes/avaliacoes.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -24,6 +25,7 @@ import { IdentityModule } from './modules/identity/identity.module';
       },
     ]),
     IdentityModule,
+    AvaliacoesModule,
   ],
   providers: [
     {
