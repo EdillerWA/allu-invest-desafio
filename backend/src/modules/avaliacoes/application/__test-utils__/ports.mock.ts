@@ -1,6 +1,10 @@
 import { Avaliacao } from '@modules/avaliacoes/domain/entities/avaliacao.entity';
 import { DomainEvent } from '@shared/domain/domain-event';
 import { InvestimentoEncerrado } from '@modules/investimentos/application/ports/investimento-gateway.port';
+import {
+  ArquivoParaSalvar,
+  ArquivoSalvo,
+} from '@modules/avaliacoes/application/ports/arquivo-storage.port';
 
 type Paginacao = { pagina: number; tamanhoPagina: number };
 type ResultadoPaginado = { itens: Avaliacao[]; total: number };
@@ -52,5 +56,11 @@ export function criarInvestimentoGatewayMock() {
       Promise<InvestimentoEncerrado | null>,
       [string]
     >(),
+  };
+}
+
+export function criarArquivoStorageMock() {
+  return {
+    salvar: jest.fn<Promise<ArquivoSalvo>, [ArquivoParaSalvar]>(),
   };
 }

@@ -17,9 +17,12 @@ import { ListarMinhasAvaliacoesHandler } from './application/queries/listar-minh
 import { ListarPendentesModeracaoHandler } from './application/queries/listar-pendentes-moderacao/listar-pendentes-moderacao.handler';
 import { ListarAvaliacoesPublicasHandler } from './application/queries/listar-avaliacoes-publicas/listar-avaliacoes-publicas.handler';
 import { ObterInvestimentoParaAvaliacaoHandler } from './application/queries/obter-investimento-para-avaliacao/obter-investimento-para-avaliacao.handler';
+import { AvaliacoesController } from './presentation/controllers/avaliacoes.controller';
+import { ModeracaoController } from './presentation/controllers/moderacao.controller';
 
 @Module({
   imports: [PrismaModule, RequestContextModule],
+  controllers: [AvaliacoesController, ModeracaoController],
   providers: [
     { provide: AvaliacaoRepositoryPort, useClass: PrismaAvaliacaoRepository },
     { provide: EventPublisherPort, useClass: NestEventPublisher },

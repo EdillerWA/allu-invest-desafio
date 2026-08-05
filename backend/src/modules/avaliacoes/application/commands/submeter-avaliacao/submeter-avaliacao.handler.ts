@@ -3,8 +3,10 @@ import { randomUUID } from 'crypto';
 import { Prisma } from '@shared/infrastructure/prisma/prisma-client';
 import { AvaliacaoRepositoryPort } from '../../ports/avaliacao-repository.port';
 import { EventPublisherPort } from '../../ports/event-publisher.port';
+import { ArquivoStoragePort } from '../../ports/arquivo-storage.port';
 import { InvestimentoGatewayPort } from '@modules/investimentos/application/ports/investimento-gateway.port';
 import { Avaliacao } from '@modules/avaliacoes/domain/entities/avaliacao.entity';
+import { Anexo } from '@modules/avaliacoes/domain/value-objects/anexo.vo';
 import { SubmeterAvaliacaoCommand } from './submeter-avaliacao.command';
 import { traduzirMotivoEncerramento } from '../../mappers/motivo-encerramento.mapper';
 import {
@@ -19,6 +21,7 @@ export class SubmeterAvaliacaoHandler {
     private readonly repository: AvaliacaoRepositoryPort,
     private readonly eventPublisher: EventPublisherPort,
     private readonly investimentoGateway: InvestimentoGatewayPort,
+    private readonly arquivoStorage: ArquivoStoragePort,
   ) {}
 
   async executar(command: SubmeterAvaliacaoCommand): Promise<Avaliacao> {
@@ -78,6 +81,25 @@ export class SubmeterAvaliacaoHandler {
 
     for (const nota of command.notas) {
       avaliacao.definirNota(nota.criterio, nota.valor);
+    }
+
+    // Anexos sao salvos em disco (ou storage equivalente) DEPOIS das notas
+    // (que podem falhar em memoria, sem I/O nenhum) mas ANTES de submeter():
+    // adicionarAnexo() so e permitido com a avaliacao ainda em RASCUNHO.
+    for (const anexoParaSalvar of command.anexos) {
+      const arquivoSalvo = await this.arquivoStorage.salvar({
+        buffer: anexoParaSalvar.buffer,
+        nomeOriginal: anexoParaSalvar.nomeOriginal,
+        tipoMime: anexoParaSalvar.tipoMime,
+      });
+      avaliacao.adicionarAnexo(
+        Anexo.criar({
+          nomeOriginal: anexoParaSalvar.nomeOriginal,
+          tipoMime: anexoParaSalvar.tipoMime,
+          caminhoArmazenamento: arquivoSalvo.caminhoArmazenamento,
+          tamanhoBytes: arquivoSalvo.tamanhoBytes,
+        }),
+      );
     }
 
     avaliacao.definirComentario(command.comentario);

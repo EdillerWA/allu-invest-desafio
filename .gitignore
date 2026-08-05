@@ -6,6 +6,7 @@ keys/
 **/src/generated/
 *.log
 .DS_Store
+backend/uploads/
 
 .agents/
 .claude/

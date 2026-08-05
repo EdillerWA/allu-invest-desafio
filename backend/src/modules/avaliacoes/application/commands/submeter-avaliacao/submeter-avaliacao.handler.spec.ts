@@ -18,6 +18,7 @@ import {
   criarRepositoryMock,
   criarEventPublisherMock,
   criarInvestimentoGatewayMock,
+  criarArquivoStorageMock,
 } from '../../__test-utils__/ports.mock';
 
 function criarInvestimentoFixture(
@@ -39,6 +40,7 @@ function criarCommand(
     investimentoId: string;
     clienteId: string;
     idempotencyKey: string | null;
+    anexos: { buffer: Buffer; nomeOriginal: string; tipoMime: string }[];
   }> = {},
 ): SubmeterAvaliacaoCommand {
   return new SubmeterAvaliacaoCommand(
@@ -48,6 +50,7 @@ function criarCommand(
     null,
     'v1',
     overrides.idempotencyKey ?? null,
+    overrides.anexos ?? [],
   );
 }
 
@@ -71,6 +74,7 @@ describe('SubmeterAvaliacaoHandler', () => {
     const repository = criarRepositoryMock();
     const eventPublisher = criarEventPublisherMock();
     const investimentoGateway = criarInvestimentoGatewayMock();
+    const arquivoStorage = criarArquivoStorageMock();
 
     let eventoPublicado: DomainEvent | undefined;
     eventPublisher.publicar.mockImplementation((evento: DomainEvent) => {
@@ -86,6 +90,7 @@ describe('SubmeterAvaliacaoHandler', () => {
       repository,
       eventPublisher,
       investimentoGateway,
+      arquivoStorage,
     );
 
     const avaliacao = await handler.executar(criarCommand());
@@ -96,10 +101,59 @@ describe('SubmeterAvaliacaoHandler', () => {
     expect(eventoPublicado?.nomeEvento).toBe('avaliacao.submetida');
   });
 
+  it('anexos: salva cada arquivo via ArquivoStoragePort e inclui o Anexo resultante na avaliacao, com o caminho e tamanho devolvidos pelo storage (nao os do upload)', async () => {
+    const repository = criarRepositoryMock();
+    const eventPublisher = criarEventPublisherMock();
+    const investimentoGateway = criarInvestimentoGatewayMock();
+    const arquivoStorage = criarArquivoStorageMock();
+
+    repository.buscarPorInvestimentoId.mockResolvedValue(null);
+    investimentoGateway.buscarInvestimentoEncerrado.mockResolvedValue(
+      criarInvestimentoFixture(),
+    );
+    arquivoStorage.salvar.mockResolvedValue({
+      caminhoArmazenamento: '/storage/uuid-gerado-comprovante.pdf',
+      tamanhoBytes: 2048,
+    });
+
+    const handler = new SubmeterAvaliacaoHandler(
+      repository,
+      eventPublisher,
+      investimentoGateway,
+      arquivoStorage,
+    );
+
+    const bufferDoUpload = Buffer.from('conteudo do arquivo');
+    const avaliacao = await handler.executar(
+      criarCommand({
+        anexos: [
+          {
+            buffer: bufferDoUpload,
+            nomeOriginal: 'comprovante.pdf',
+            tipoMime: 'application/pdf',
+          },
+        ],
+      }),
+    );
+
+    expect(arquivoStorage.salvar).toHaveBeenCalledWith({
+      buffer: bufferDoUpload,
+      nomeOriginal: 'comprovante.pdf',
+      tipoMime: 'application/pdf',
+    });
+    expect(avaliacao.anexos).toHaveLength(1);
+    expect(avaliacao.anexos[0].obterNomeOriginal()).toBe('comprovante.pdf');
+    expect(avaliacao.anexos[0].obterCaminhoArmazenamento()).toBe(
+      '/storage/uuid-gerado-comprovante.pdf',
+    );
+    expect(avaliacao.anexos[0].obterTamanhoBytes()).toBe(2048);
+  });
+
   it('idempotencia por idempotencyKey: retorna a existente sem chamar o gateway de novo', async () => {
     const repository = criarRepositoryMock();
     const eventPublisher = criarEventPublisherMock();
     const investimentoGateway = criarInvestimentoGatewayMock();
+    const arquivoStorage = criarArquivoStorageMock();
 
     const existente = criarAvaliacaoExistente();
     repository.buscarPorIdempotencyKey.mockResolvedValue(existente);
@@ -108,6 +162,7 @@ describe('SubmeterAvaliacaoHandler', () => {
       repository,
       eventPublisher,
       investimentoGateway,
+      arquivoStorage,
     );
 
     const resultado = await handler.executar(
@@ -125,6 +180,7 @@ describe('SubmeterAvaliacaoHandler', () => {
     const repository = criarRepositoryMock();
     const eventPublisher = criarEventPublisherMock();
     const investimentoGateway = criarInvestimentoGatewayMock();
+    const arquivoStorage = criarArquivoStorageMock();
 
     const existente = criarAvaliacaoExistente();
     repository.buscarPorInvestimentoId.mockResolvedValue(existente);
@@ -133,6 +189,7 @@ describe('SubmeterAvaliacaoHandler', () => {
       repository,
       eventPublisher,
       investimentoGateway,
+      arquivoStorage,
     );
 
     const resultado = await handler.executar(criarCommand());
@@ -148,6 +205,7 @@ describe('SubmeterAvaliacaoHandler', () => {
     const repository = criarRepositoryMock();
     const eventPublisher = criarEventPublisherMock();
     const investimentoGateway = criarInvestimentoGatewayMock();
+    const arquivoStorage = criarArquivoStorageMock();
 
     repository.buscarPorInvestimentoId.mockResolvedValue(null);
     investimentoGateway.buscarInvestimentoEncerrado.mockResolvedValue(null);
@@ -156,6 +214,7 @@ describe('SubmeterAvaliacaoHandler', () => {
       repository,
       eventPublisher,
       investimentoGateway,
+      arquivoStorage,
     );
 
     await expect(handler.executar(criarCommand())).rejects.toThrow(
@@ -167,6 +226,7 @@ describe('SubmeterAvaliacaoHandler', () => {
     const repository = criarRepositoryMock();
     const eventPublisher = criarEventPublisherMock();
     const investimentoGateway = criarInvestimentoGatewayMock();
+    const arquivoStorage = criarArquivoStorageMock();
 
     repository.buscarPorInvestimentoId.mockResolvedValue(null);
     investimentoGateway.buscarInvestimentoEncerrado.mockResolvedValue(
@@ -177,6 +237,7 @@ describe('SubmeterAvaliacaoHandler', () => {
       repository,
       eventPublisher,
       investimentoGateway,
+      arquivoStorage,
     );
 
     await expect(
@@ -188,6 +249,7 @@ describe('SubmeterAvaliacaoHandler', () => {
     const repository = criarRepositoryMock();
     const eventPublisher = criarEventPublisherMock();
     const investimentoGateway = criarInvestimentoGatewayMock();
+    const arquivoStorage = criarArquivoStorageMock();
 
     // Checagem inicial de idempotencia: RLS ja filtra a linha do outro
     // cliente, entao "nao existe" do ponto de vista deste cliente.
@@ -210,6 +272,7 @@ describe('SubmeterAvaliacaoHandler', () => {
       repository,
       eventPublisher,
       investimentoGateway,
+      arquivoStorage,
     );
 
     await expect(
