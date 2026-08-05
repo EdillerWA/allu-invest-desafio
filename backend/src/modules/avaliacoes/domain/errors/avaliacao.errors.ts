@@ -58,3 +58,21 @@ export class MotivoRejeicaoObrigatorioError extends DomainError {
     super('E obrigatorio informar o motivo ao rejeitar uma avaliacao.');
   }
 }
+
+export class LimiteDeAnexosExcedidoError extends DomainError {
+  readonly code = 'LIMITE_DE_ANEXOS_EXCEDIDO';
+
+  constructor() {
+    super('Uma avaliacao pode ter no maximo 3 anexos.');
+  }
+}
+
+export class TamanhoDeAnexoInvalidoError extends DomainError {
+  readonly code = 'TAMANHO_DE_ANEXO_INVALIDO';
+
+  constructor(tamanhoBytes: number) {
+    super(
+      `O tamanho do anexo (${tamanhoBytes} bytes) deve ser maior que zero e nao pode exceder 5MB.`,
+    );
+  }
+}

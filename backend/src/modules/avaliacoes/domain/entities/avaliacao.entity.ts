@@ -1,6 +1,7 @@
 import { AggregateRoot } from '@shared/domain/aggregate-root';
 import { Nota } from '../value-objects/nota.vo';
 import { AceitePolitica } from '../value-objects/aceite-politica.vo';
+import { Anexo } from '../value-objects/anexo.vo';
 import { AvaliacaoSubmetidaEvent } from '../events/avaliacao-submetida.event';
 import { AvaliacaoModeradaEvent } from '../events/avaliacao-moderada.event';
 import {
@@ -9,7 +10,10 @@ import {
   PoliticaNaoAceitaError,
   NenhumCriterioAvaliadoError,
   MotivoRejeicaoObrigatorioError,
+  LimiteDeAnexosExcedidoError,
 } from '../errors/avaliacao.errors';
+
+const MAXIMO_DE_ANEXOS = 3;
 
 export enum StatusAvaliacao {
   RASCUNHO = 'RASCUNHO',
@@ -62,6 +66,7 @@ interface PropsAvaliacao {
   status: StatusAvaliacao;
   comentario: string | null;
   notas: Map<TipoCriterio, Nota>;
+  anexos: Anexo[];
   aceitePolitica: AceitePolitica | null;
   idempotencyKey: string | null;
 }
@@ -87,6 +92,7 @@ export class Avaliacao extends AggregateRoot {
       status: StatusAvaliacao.RASCUNHO,
       comentario: null,
       notas: new Map(),
+      anexos: [],
       aceitePolitica: null,
       idempotencyKey: null,
     });
@@ -106,6 +112,16 @@ export class Avaliacao extends AggregateRoot {
     }
 
     this.props.notas.set(criterio, Nota.criar(valor));
+  }
+
+  adicionarAnexo(anexo: Anexo): void {
+    this.garantirTransicaoPermitida(StatusAvaliacao.RASCUNHO);
+
+    if (this.props.anexos.length >= MAXIMO_DE_ANEXOS) {
+      throw new LimiteDeAnexosExcedidoError();
+    }
+
+    this.props.anexos.push(anexo);
   }
 
   definirComentario(comentario: string | null): void {
@@ -214,6 +230,10 @@ export class Avaliacao extends AggregateRoot {
 
   get notas(): ReadonlyMap<TipoCriterio, Nota> {
     return this.props.notas;
+  }
+
+  get anexos(): readonly Anexo[] {
+    return [...this.props.anexos];
   }
 
   get aceitePolitica(): AceitePolitica | null {

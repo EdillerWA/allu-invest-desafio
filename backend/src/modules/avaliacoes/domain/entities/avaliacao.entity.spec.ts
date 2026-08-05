@@ -4,6 +4,7 @@ import {
   TipoCriterio,
   MotivoEncerramento,
 } from './avaliacao.entity';
+import { Anexo } from '../value-objects/anexo.vo';
 import {
   TransicaoInvalidaError,
   CriterioDuplicadoError,
@@ -11,7 +12,17 @@ import {
   NenhumCriterioAvaliadoError,
   MotivoRejeicaoObrigatorioError,
   NotaForaDoIntervaloError,
+  LimiteDeAnexosExcedidoError,
 } from '../errors/avaliacao.errors';
+
+function criarAnexoDeTeste(nomeOriginal = 'comprovante.pdf'): Anexo {
+  return Anexo.criar({
+    nomeOriginal,
+    caminhoArmazenamento: `/anexos/${nomeOriginal}`,
+    tipoMime: 'application/pdf',
+    tamanhoBytes: 1024,
+  });
+}
 
 function criarAvaliacaoDeTeste(): Avaliacao {
   return Avaliacao.criarConvite({
@@ -75,6 +86,48 @@ describe('Avaliacao', () => {
       expect(() =>
         avaliacao.definirNota(TipoCriterio.CLAREZA_INFORMACOES, 3),
       ).toThrow(TransicaoInvalidaError);
+    });
+  });
+
+  describe('adicionarAnexo', () => {
+    it('adiciona um anexo com sucesso em RASCUNHO', () => {
+      const avaliacao = criarAvaliacaoDeTeste();
+      avaliacao.adicionarAnexo(criarAnexoDeTeste());
+
+      expect(avaliacao.anexos).toHaveLength(1);
+      expect(avaliacao.anexos[0].obterNomeOriginal()).toBe('comprovante.pdf');
+    });
+
+    it('rejeita adicionar anexo fora do status RASCUNHO', () => {
+      const avaliacao = criarAvaliacaoDeTeste();
+      avaliacao.definirNota(TipoCriterio.ATENDIMENTO, 5);
+      avaliacao.aceitarPolitica('v1');
+      avaliacao.submeter();
+
+      expect(() => avaliacao.adicionarAnexo(criarAnexoDeTeste())).toThrow(
+        TransicaoInvalidaError,
+      );
+    });
+
+    it('rejeita exceder o limite de 3 anexos', () => {
+      const avaliacao = criarAvaliacaoDeTeste();
+      avaliacao.adicionarAnexo(criarAnexoDeTeste('anexo-1.pdf'));
+      avaliacao.adicionarAnexo(criarAnexoDeTeste('anexo-2.pdf'));
+      avaliacao.adicionarAnexo(criarAnexoDeTeste('anexo-3.pdf'));
+
+      expect(() =>
+        avaliacao.adicionarAnexo(criarAnexoDeTeste('anexo-4.pdf')),
+      ).toThrow(LimiteDeAnexosExcedidoError);
+    });
+
+    it('get anexos() retorna copia — alterar o array retornado nao afeta o estado interno', () => {
+      const avaliacao = criarAvaliacaoDeTeste();
+      avaliacao.adicionarAnexo(criarAnexoDeTeste());
+
+      const anexosRetornados = avaliacao.anexos as Anexo[];
+      anexosRetornados.push(criarAnexoDeTeste('intruso.pdf'));
+
+      expect(avaliacao.anexos).toHaveLength(1);
     });
   });
 
