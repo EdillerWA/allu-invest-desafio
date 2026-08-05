@@ -38,3 +38,11 @@ export class MotivoEncerramentoDesconhecidoError extends ApplicationError {
     );
   }
 }
+
+export class AvaliacaoNaoEncontradaError extends ApplicationError {
+  readonly code = 'AVALIACAO_NAO_ENCONTRADA';
+
+  constructor(avaliacaoId: string) {
+    super(`Avaliacao ${avaliacaoId} nao encontrada.`);
+  }
+}
