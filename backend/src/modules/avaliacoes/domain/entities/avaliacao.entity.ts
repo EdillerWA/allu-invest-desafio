@@ -71,7 +71,7 @@ export class Avaliacao extends AggregateRoot {
     super();
   }
 
-  // --- Fabricas ---
+  // Fabrica
 
   static criarConvite(params: {
     id: string;
@@ -96,7 +96,7 @@ export class Avaliacao extends AggregateRoot {
     return new Avaliacao(props);
   }
 
-  // --- Comportamento de dominio ---
+  // Comportamento de dominio
 
   definirNota(criterio: TipoCriterio, valor: number): void {
     this.garantirTransicaoPermitida(StatusAvaliacao.RASCUNHO);
@@ -175,8 +175,6 @@ export class Avaliacao extends AggregateRoot {
     );
   }
 
-  // --- Validacao de transicao (state machine) ---
-
   private validarTransicao(destino: StatusAvaliacao): void {
     const permitidas = TRANSICOES_PERMITIDAS[this.props.status];
     if (!permitidas.includes(destino)) {
@@ -192,7 +190,7 @@ export class Avaliacao extends AggregateRoot {
     }
   }
 
-  // --- Getters de leitura ---
+  // Getters de leitura
 
   get id(): string {
     return this.props.id;
