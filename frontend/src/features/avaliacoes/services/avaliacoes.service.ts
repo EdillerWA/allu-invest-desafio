@@ -1,8 +1,19 @@
 import { http } from '@/shared/lib/http'
-import type { AvaliacaoResposta, ConviteAvaliacaoResposta, NotaInput } from '../types/avaliacao.types'
+import type { StatusAvaliacao } from '@/shared/types/avaliacao-status'
+import type {
+  AvaliacaoResposta,
+  ConviteAvaliacaoResposta,
+  ConviteResumo,
+  NotaInput,
+} from '../types/avaliacao.types'
 
 export async function obterConvite(investimentoId: string): Promise<ConviteAvaliacaoResposta> {
   const { data } = await http.get<ConviteAvaliacaoResposta>(`/avaliacoes/convite/${investimentoId}`)
+  return data
+}
+
+export async function listarConvites(): Promise<ConviteResumo[]> {
+  const { data } = await http.get<ConviteResumo[]>('/avaliacoes/convites')
   return data
 }
 
@@ -11,12 +22,18 @@ interface ListaPaginada {
   total: number
 }
 
+interface ListarMinhasFiltro {
+  status?: StatusAvaliacao
+  q?: string
+}
+
 export async function listarMinhas(
   pagina: number,
   tamanhoPagina: number,
+  filtro?: ListarMinhasFiltro,
 ): Promise<ListaPaginada> {
   const { data } = await http.get<ListaPaginada>('/avaliacoes', {
-    params: { pagina, tamanhoPagina },
+    params: { pagina, tamanhoPagina, status: filtro?.status, q: filtro?.q },
   })
   return data
 }

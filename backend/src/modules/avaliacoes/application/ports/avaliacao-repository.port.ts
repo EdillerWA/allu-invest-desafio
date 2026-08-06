@@ -21,11 +21,12 @@ export abstract class AvaliacaoRepositoryPort {
   abstract listarPorCliente(
     clienteId: string,
     paginacao: { pagina: number; tamanhoPagina: number },
+    filtro?: { status?: StatusAvaliacao; q?: string },
   ): Promise<{ itens: Avaliacao[]; total: number }>;
-  abstract listarPendentesDeModeracao(paginacao: {
-    pagina: number;
-    tamanhoPagina: number;
-  }): Promise<{ itens: Avaliacao[]; total: number }>;
+  abstract listarPendentesDeModeracao(
+    paginacao: { pagina: number; tamanhoPagina: number },
+    filtro?: { q?: string },
+  ): Promise<{ itens: Avaliacao[]; total: number }>;
   abstract listarPublicasAprovadas(
     investimentoId: string,
     paginacao: { pagina: number; tamanhoPagina: number },

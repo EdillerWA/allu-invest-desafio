@@ -31,6 +31,7 @@ export class ModeracaoController {
       new ListarPendentesModeracaoQuery(
         paginacao.pagina ?? 1,
         paginacao.tamanhoPagina ?? 10,
+        paginacao.q,
       ),
     );
 

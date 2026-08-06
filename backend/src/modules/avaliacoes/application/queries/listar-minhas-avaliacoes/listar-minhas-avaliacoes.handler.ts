@@ -10,9 +10,10 @@ export class ListarMinhasAvaliacoesHandler {
   async executar(
     query: ListarMinhasAvaliacoesQuery,
   ): Promise<{ itens: Avaliacao[]; total: number }> {
-    return this.repository.listarPorCliente(query.clienteId, {
-      pagina: query.pagina,
-      tamanhoPagina: query.tamanhoPagina,
-    });
+    return this.repository.listarPorCliente(
+      query.clienteId,
+      { pagina: query.pagina, tamanhoPagina: query.tamanhoPagina },
+      { status: query.status, q: query.q },
+    );
   }
 }

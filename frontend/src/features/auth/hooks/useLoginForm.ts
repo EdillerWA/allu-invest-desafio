@@ -25,7 +25,7 @@ export function useLoginForm() {
 
     setError(null)
     login(trimmed)
-    navigate('/perfil', { replace: true })
+    navigate('/', { replace: true })
   }
 
   return { tokenInput, setTokenInput, error, handleSubmit }

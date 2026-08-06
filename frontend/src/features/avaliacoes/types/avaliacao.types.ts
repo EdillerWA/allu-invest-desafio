@@ -39,3 +39,14 @@ export interface ConviteAvaliacaoResposta {
   investimento: InvestimentoConvite
   avaliacaoExistente: AvaliacaoResposta | null
 }
+
+export interface ConviteResumo {
+  investimentoId: string
+  tipoProduto: string
+  valorAplicado: number
+  dataAplicacao: string
+  dataEncerramento: string
+  motivoEncerramento: string
+  avaliacaoId: string | null
+  statusAvaliacao: StatusAvaliacao | null
+}

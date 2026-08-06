@@ -10,9 +10,9 @@ export class ListarPendentesModeracaoHandler {
   async executar(
     query: ListarPendentesModeracaoQuery,
   ): Promise<{ itens: Avaliacao[]; total: number }> {
-    return this.repository.listarPendentesDeModeracao({
-      pagina: query.pagina,
-      tamanhoPagina: query.tamanhoPagina,
-    });
+    return this.repository.listarPendentesDeModeracao(
+      { pagina: query.pagina, tamanhoPagina: query.tamanhoPagina },
+      { q: query.q },
+    );
   }
 }

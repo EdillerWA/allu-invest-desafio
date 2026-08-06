@@ -13,7 +13,9 @@ import {
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '@modules/identity/decorators/current-user.decorator';
+import { Roles } from '@modules/identity/decorators/roles.decorator';
 import type { AuthenticatedUser } from '@shared/domain/auth/authenticated-user';
+import { RoleUsuario } from '@shared/domain/auth/authenticated-user';
 import { SubmeterAvaliacaoHandler } from '../../application/commands/submeter-avaliacao/submeter-avaliacao.handler';
 import { SubmeterAvaliacaoCommand } from '../../application/commands/submeter-avaliacao/submeter-avaliacao.command';
 import { ObterAvaliacaoHandler } from '../../application/queries/obter-avaliacao/obter-avaliacao.handler';
@@ -22,8 +24,10 @@ import { ListarMinhasAvaliacoesHandler } from '../../application/queries/listar-
 import { ListarMinhasAvaliacoesQuery } from '../../application/queries/listar-minhas-avaliacoes/listar-minhas-avaliacoes.query';
 import { ObterInvestimentoParaAvaliacaoHandler } from '../../application/queries/obter-investimento-para-avaliacao/obter-investimento-para-avaliacao.handler';
 import { ObterInvestimentoParaAvaliacaoQuery } from '../../application/queries/obter-investimento-para-avaliacao/obter-investimento-para-avaliacao.query';
+import { ListarConvitesAvaliacaoHandler } from '../../application/queries/listar-convites-avaliacao/listar-convites-avaliacao.handler';
+import { ListarConvitesAvaliacaoQuery } from '../../application/queries/listar-convites-avaliacao/listar-convites-avaliacao.query';
 import { SubmeterAvaliacaoDto } from '../dtos/submeter-avaliacao.dto';
-import { PaginacaoQueryDto } from '../dtos/paginacao-query.dto';
+import { ListarMinhasAvaliacoesQueryDto } from '../dtos/listar-minhas-avaliacoes-query.dto';
 import { paraResposta } from '../dtos/avaliacao-resposta.mapper';
 import {
   MAXIMO_DE_ANEXOS_POR_REQUISICAO,
@@ -31,13 +35,17 @@ import {
   TIPOS_DE_ANEXO_PERMITIDOS,
 } from './upload-anexo.config';
 
+// Este controller e do cliente (submeter/ver as proprias avaliacoes), nao do
+// moderador — RBAC de papel simetrico ao @Roles(MODERADOR) do ModeracaoController.
 @Controller('avaliacoes')
+@Roles(RoleUsuario.CLIENTE)
 export class AvaliacoesController {
   constructor(
     private readonly submeterHandler: SubmeterAvaliacaoHandler,
     private readonly obterHandler: ObterAvaliacaoHandler,
     private readonly listarMinhasHandler: ListarMinhasAvaliacoesHandler,
     private readonly obterInvestimentoParaAvaliacaoHandler: ObterInvestimentoParaAvaliacaoHandler,
+    private readonly listarConvitesHandler: ListarConvitesAvaliacaoHandler,
   ) {}
 
   @Post()
@@ -81,13 +89,15 @@ export class AvaliacoesController {
   @Get()
   async listarMinhas(
     @CurrentUser() usuario: AuthenticatedUser,
-    @Query() paginacao: PaginacaoQueryDto,
+    @Query() paginacao: ListarMinhasAvaliacoesQueryDto,
   ) {
     const resultado = await this.listarMinhasHandler.executar(
       new ListarMinhasAvaliacoesQuery(
         usuario.id,
         paginacao.pagina ?? 1,
         paginacao.tamanhoPagina ?? 10,
+        paginacao.status,
+        paginacao.q,
       ),
     );
 
@@ -97,8 +107,14 @@ export class AvaliacoesController {
     };
   }
 
-  // Precisa vir ANTES de GET /avaliacoes/:id — caso contrario "convite"
-  // seria interpretado como o parametro :id da rota abaixo.
+  @Get('convites')
+  async listarConvites(@CurrentUser() usuario: AuthenticatedUser) {
+    return this.listarConvitesHandler.executar(
+      new ListarConvitesAvaliacaoQuery(usuario.id),
+    );
+  }
+
+  // Precisa vir ANTES de GET /avaliacoes/:id, senao "convite" cai no :id.
   @Get('convite/:investimentoId')
   async obterConvite(
     @Param('investimentoId') investimentoId: string,

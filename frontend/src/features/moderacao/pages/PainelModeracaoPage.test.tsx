@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { http, HttpResponse, delay } from 'msw'
 import userEvent from '@testing-library/user-event'
 import { toast } from 'sonner'
-import { renderWithProviders, screen, waitFor } from '@/test/test-utils'
+import { renderWithProviders, screen, waitFor, within } from '@/test/test-utils'
 import { server } from '@/test/server'
 import { PainelModeracaoPage } from './PainelModeracaoPage'
 
@@ -66,9 +66,7 @@ describe('PainelModeracaoPage', () => {
 
     renderWithProviders(<PainelModeracaoPage />)
 
-    expect(
-      await screen.findByText('Nenhuma avaliação pendente de moderação.'),
-    ).toBeInTheDocument()
+    expect(await screen.findByText('Fila em dia')).toBeInTheDocument()
   })
 
   it('lista as avaliacoes pendentes reais retornadas pela API', async () => {
@@ -81,7 +79,44 @@ describe('PainelModeracaoPage', () => {
     renderWithProviders(<PainelModeracaoPage />)
 
     expect(await screen.findByText('CDB')).toBeInTheDocument()
-    expect(screen.getByText('EM_MODERACAO')).toBeInTheDocument()
+    expect(screen.getByText('Em moderação')).toBeInTheDocument()
+  })
+
+  it('abre o modal de detalhes com os dados da avaliacao ao clicar em Ver detalhes', async () => {
+    server.use(
+      http.get(`${BASE}/moderacao/pendentes`, () =>
+        HttpResponse.json({ itens: [AVALIACAO_PENDENTE], total: 1 }),
+      ),
+    )
+
+    const user = userEvent.setup()
+    renderWithProviders(<PainelModeracaoPage />)
+    await screen.findByText('CDB')
+
+    await user.click(screen.getByRole('button', { name: 'Ver detalhes' }))
+
+    const dialog = within(await screen.findByRole('dialog'))
+    expect(dialog.getByText('cliente-1')).toBeInTheDocument()
+    expect(dialog.getByRole('button', { name: 'Aprovar' })).toBeInTheDocument()
+  })
+
+  it('reenvia a listagem com o texto de busca digitado (debounced)', async () => {
+    const buscasRecebidas: (string | null)[] = []
+    server.use(
+      http.get(`${BASE}/moderacao/pendentes`, ({ request }) => {
+        const url = new URL(request.url)
+        buscasRecebidas.push(url.searchParams.get('q'))
+        return HttpResponse.json({ itens: [AVALIACAO_PENDENTE], total: 1 })
+      }),
+    )
+
+    const user = userEvent.setup()
+    renderWithProviders(<PainelModeracaoPage />)
+    await screen.findByText('CDB')
+
+    await user.type(screen.getByPlaceholderText('Buscar por produto ou cliente...'), 'cliente-1')
+
+    await waitFor(() => expect(buscasRecebidas).toContain('cliente-1'), { timeout: 2000 })
   })
 
   it('trata 409 do rejeitar como conflito visivel, nao erro generico, e atualiza a lista', async () => {
@@ -107,9 +142,11 @@ describe('PainelModeracaoPage', () => {
     const user = userEvent.setup()
     renderWithProviders(<PainelModeracaoPage />)
 
-    await user.click(await screen.findByRole('button', { name: 'Rejeitar' }))
-    await user.type(screen.getByLabelText('Motivo'), 'Motivo qualquer')
+    await screen.findByText('CDB')
     await user.click(screen.getByRole('button', { name: 'Rejeitar' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await user.type(dialog.getByLabelText('Motivo'), 'Motivo qualquer')
+    await user.click(dialog.getByRole('button', { name: 'Rejeitar' }))
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
@@ -143,7 +180,8 @@ describe('PainelModeracaoPage', () => {
     const user = userEvent.setup()
     renderWithProviders(<PainelModeracaoPage />)
 
-    await user.click(await screen.findByRole('button', { name: 'Aprovar' }))
+    await screen.findByText('CDB')
+    await user.click(screen.getByRole('button', { name: 'Aprovar' }))
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
@@ -176,9 +214,11 @@ describe('PainelModeracaoPage', () => {
     const user = userEvent.setup()
     renderWithProviders(<PainelModeracaoPage />)
 
-    await user.click(await screen.findByRole('button', { name: 'Rejeitar' }))
-    await user.type(screen.getByLabelText('Motivo'), 'Motivo qualquer')
+    await screen.findByText('CDB')
     await user.click(screen.getByRole('button', { name: 'Rejeitar' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await user.type(dialog.getByLabelText('Motivo'), 'Motivo qualquer')
+    await user.click(dialog.getByRole('button', { name: 'Rejeitar' }))
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith('Motivo da rejeicao e obrigatorio.')

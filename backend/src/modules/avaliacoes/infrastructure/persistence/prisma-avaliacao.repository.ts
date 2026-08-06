@@ -194,6 +194,7 @@ export class PrismaAvaliacaoRepository implements AvaliacaoRepositoryPort {
   async listarPorCliente(
     clienteId: string,
     paginacao: Paginacao,
+    filtro?: { status?: StatusAvaliacao; q?: string },
   ): Promise<{ itens: Avaliacao[]; total: number }> {
     try {
       return await this.executarComContexto(async (tx) => {
@@ -208,7 +209,22 @@ export class PrismaAvaliacaoRepository implements AvaliacaoRepositoryPort {
           return { itens: [], total: 0 };
         }
 
-        return this.buscarPaginado(tx, { clienteId }, paginacao);
+        return this.buscarPaginado(
+          tx,
+          {
+            clienteId,
+            ...(filtro?.status ? { status: filtro.status } : {}),
+            ...(filtro?.q
+              ? {
+                  investimentoTipoProduto: {
+                    contains: filtro.q,
+                    mode: 'insensitive',
+                  },
+                }
+              : {}),
+          },
+          paginacao,
+        );
       });
     } catch (erro) {
       throw this.traduzirErroDePersistencia(erro);
@@ -217,6 +233,7 @@ export class PrismaAvaliacaoRepository implements AvaliacaoRepositoryPort {
 
   async listarPendentesDeModeracao(
     paginacao: Paginacao,
+    filtro?: { q?: string },
   ): Promise<{ itens: Avaliacao[]; total: number }> {
     try {
       return await this.executarComContexto(async (tx) => {
@@ -232,6 +249,19 @@ export class PrismaAvaliacaoRepository implements AvaliacaoRepositoryPort {
             status: {
               in: [StatusAvaliacao.ENVIADA, StatusAvaliacao.EM_MODERACAO],
             },
+            ...(filtro?.q
+              ? {
+                  OR: [
+                    {
+                      investimentoTipoProduto: {
+                        contains: filtro.q,
+                        mode: 'insensitive',
+                      },
+                    },
+                    { clienteId: { contains: filtro.q, mode: 'insensitive' } },
+                  ],
+                }
+              : {}),
           },
           paginacao,
         );

@@ -11,11 +11,11 @@ Desafio técnico para vaga de Desenvolvedor(a) Full Stack Pleno na allu: cliente
 - [x] Casos de uso (submeter, aprovar, rejeitar, listar, obter convite)
 - [x] Persistência real com Row-Level Security (Postgres RLS) ativo
 - [x] API REST (controllers, DTOs, exception filter global)
-- [x] Testes automatizados do backend (124 unitários + e2e real contra guards/exception filter)
-- [x] Frontend (React) — submissão, painel de moderação, listagem de avaliações e tela de detalhe, todos funcionais ponta a ponta contra o backend real
+- [x] Testes automatizados do backend (136 unitários + e2e real contra guards/exception filter)
+- [x] Frontend (React) — descoberta de investimentos encerrados, submissão, painel de moderação, listagem de avaliações e tela de detalhe, todos funcionais ponta a ponta contra o backend real
 - [x] Documentação final de decisões arquiteturais consolidada (`RELATORIO_DECISOES.md`)
 
-O backend está funcionalmente completo e testado (unitário + e2e + manual ponta a ponta, incluindo prova de concorrência real). O frontend cobre as quatro telas de negócio (submissão, moderação, listagem, detalhe), com teste automatizado cobrindo carregamento/erro/vazio/sucesso e validação manual contra o backend real — histórico completo do corte de escopo original e do fechamento posterior em `RELATORIO_DECISOES.md`.
+O backend está funcionalmente completo e testado (unitário + e2e + manual ponta a ponta, incluindo prova de concorrência real). O frontend cobre as cinco telas de negócio (descoberta de investimentos encerrados, submissão, moderação, listagem, detalhe), com filtro por status e busca por produto/cliente onde há mais de um item pra filtrar, RBAC de papel também nas rotas do frontend (não só no backend), teste automatizado cobrindo carregamento/erro/vazio/sucesso/filtro e validação manual contra o backend real — histórico completo do corte de escopo original e do fechamento posterior em `RELATORIO_DECISOES.md`.
 
 ## Stack
 
@@ -129,13 +129,17 @@ npx ts-node -r tsconfig-paths/register src/scripts/gerar-token-teste.ts cliente 
 npx ts-node -r tsconfig-paths/register src/scripts/gerar-token-teste.ts moderador moderador-teste-001
 ```
 
-Não existe seed de investimentos "de verdade" — o contexto `investimentos` é simulado por um gateway com 3 fixtures fixas (`MockInvestimentoGatewayAdapter`), pensadas pra cobrir os cenários abaixo:
+Não existe seed de investimentos "de verdade" — o contexto `investimentos` é simulado por um gateway com fixtures fixas (`MockInvestimentoGatewayAdapter`), pensadas pra cobrir os cenários abaixo:
 
 | `investimentoId` | dono (`clienteId`) | produto |
 |---|---|---|
 | `investimento-001` | `cliente-teste-001` | CDB Pós-fixado |
 | `investimento-002` | `cliente-teste-002` | LCI |
 | `investimento-003` | `cliente-teste-001` | Tesouro Selic |
+| `investimento-004` | `cliente-teste-001` | CDB Prefixado |
+| `investimento-005` | `cliente-teste-001` | LCA |
+| `investimento-006` | `cliente-teste-001` | Debênture Incentivada |
+| `investimento-007` | `cliente-teste-002` | Tesouro IPCA+ |
 
 Salve os 3 tokens em variáveis e siga o fluxo:
 
@@ -192,23 +196,29 @@ Todas sob o prefixo `/api`. Autenticação via `Authorization: Bearer <token>` e
 |---|---|---|---|
 | GET | `/me` | qualquer autenticado | dados do usuário autenticado |
 | POST | `/avaliacoes` | cliente | submete avaliação (multipart, anexos opcionais) |
-| GET | `/avaliacoes` | cliente | lista as próprias avaliações (paginado, `?pagina=&tamanhoPagina=`, máx. 50) |
+| GET | `/avaliacoes` | cliente | lista as próprias avaliações (paginado, `?pagina=&tamanhoPagina=`, máx. 50, `?status=` e `?q=` opcionais para filtrar) |
+| GET | `/avaliacoes/convites` | cliente | investimentos encerrados do cliente com o status da avaliação (se houver) — usado pela tela inicial |
 | GET | `/avaliacoes/convite/:investimentoId` | cliente | dados do investimento + avaliação existente (se houver) |
 | GET | `/avaliacoes/:id` | cliente (dono) | detalhe de uma avaliação — 404 se não existe ou não é sua |
-| GET | `/moderacao/pendentes` | moderador | fila de avaliações aguardando moderação (paginado) |
+| GET | `/moderacao/pendentes` | moderador | fila de avaliações aguardando moderação (paginado, `?q=` opcional para filtrar) |
 | POST | `/moderacao/:id/aprovar` | moderador | aprova |
 | POST | `/moderacao/:id/rejeitar` | moderador | rejeita (`{"motivo": "..."}` obrigatório) |
 
+`AvaliacoesController` (todas as rotas `/avaliacoes*`) é restrito a `RoleUsuario.CLIENTE` e `ModeracaoController` a `RoleUsuario.MODERADOR`, o mesmo `@Roles` + `RolesGuard` global usado em todo o projeto — um moderador não tem investimento próprio pra avaliar, então nunca deveria ter acesso de escrita/leitura às rotas do cliente, e vice-versa (403 nos dois sentidos, verificado com token real de cada papel).
+
 ## Frontend
 
-O frontend vive em `frontend/`, já mesclado em `main`. Bootstrap completo (Vite, Tailwind, shadcn/ui, TanStack Query, roteamento), autenticação real contra `GET /api/me` (tela de login cola o token gerado pelo script acima), e as quatro telas de negócio funcionais:
+O frontend vive em `frontend/`, já mesclado em `main`. Bootstrap completo (Vite, Tailwind, shadcn/ui, TanStack Query, roteamento), autenticação real contra `GET /api/me` (tela de login cola o token gerado pelo script acima), e as cinco telas de negócio funcionais:
 
+- `/investimentos` — tela inicial do cliente após o login: todos os investimentos encerrados (`GET /avaliacoes/convites`), com KPIs (quantidade, aguardando avaliação, valor total aplicado), filtro por status e busca por produto; leva pra "Avaliar agora" ou "Ver avaliação" conforme o caso.
 - `/investimentos/:investimentoId/avaliar` — convite e submissão: informações do investimento, notas por critério, comentário, upload de anexo e aceite de política via `POST /avaliacoes`; mostra o status (incluindo motivo, se rejeitada) quando já existe avaliação para aquele investimento, em vez do formulário.
-- `/minhas-avaliacoes` — listagem paginada das próprias avaliações do cliente.
+- `/minhas-avaliacoes` — listagem paginada das próprias avaliações do cliente, com filtro por status (server-side, via `?status=`) e busca por produto (server-side, via `?q=`, debounced).
 - `/avaliacoes/:id` — detalhe de uma avaliação (notas, comentário, anexos, motivo de rejeição quando houver); 404 genérico se não existe ou não pertence ao cliente autenticado.
-- `/moderacao` — painel de moderação (fila paginada, aprovar, rejeitar com motivo obrigatório), atrás de `RoleGuardedRoute` — só usuário com papel `MODERADOR` acessa, os demais são redirecionados.
+- `/moderacao` — painel de moderação (fila paginada, busca por produto/cliente, ver detalhes completos da avaliação antes de decidir, aprovar, rejeitar com motivo obrigatório), atrás de `RoleGuardedRoute` — só usuário com papel `MODERADOR` acessa.
 
-Teste automatizado (Vitest + MSW, backend real nunca tocado) cobre carregamento, erro, estado vazio e sucesso das três telas mais recentes, incluindo o tratamento do conflito de moderação concorrente (409) como caso de erro distinto, não genérico.
+As quatro primeiras rotas ficam atrás de `RoleGuardedRoute role="CLIENTE"` (o inverso da restrição de `/moderacao`) — um moderador que tentar acessá-las é redirecionado para `/moderacao`, e o redirecionamento pós-login (`/`) escolhe o destino pelo papel do usuário (`/investimentos` para cliente, `/moderacao` para moderador), evitando o loop de redirecionamento que existiria se a rota padrão fosse fixa.
+
+Teste automatizado (Vitest + MSW, backend real nunca tocado) cobre carregamento, erro, estado vazio, sucesso, filtro por status e busca das telas de listagem, incluindo o tratamento do conflito de moderação concorrente (409) como caso de erro distinto, não genérico.
 
 Para rodar:
 
@@ -217,7 +227,7 @@ cd frontend
 cp .env.example .env   # já aponta pra http://localhost:3000/api
 pnpm install
 pnpm run dev
-pnpm test:run           # 16 testes
+pnpm test:run           # 37 testes
 ```
 
 Abre em `http://localhost:5173`. Precisa do backend rodando (seção anterior).

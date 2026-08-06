@@ -23,18 +23,23 @@ export function PerfilPage() {
   }
 
   return (
-    <main className="flex min-h-svh items-center justify-center bg-background p-4">
+    <div className="flex w-full flex-col gap-6 p-6 py-10 md:p-8">
+      <div>
+        <h1 className="text-xl font-semibold">Perfil</h1>
+        <p className="text-sm text-muted-foreground">Seus dados de acesso à plataforma.</p>
+      </div>
+
       {isPending ? (
         <div
           role="status"
           aria-live="polite"
-          className="flex flex-col items-center gap-2 text-muted-foreground"
+          className="flex flex-col items-center gap-2 py-16 text-muted-foreground"
         >
           <Loader2 className="size-6 animate-spin" aria-hidden="true" />
           <span>Carregando perfil...</span>
         </div>
       ) : isError ? (
-        <div className="flex w-full max-w-md flex-col items-center gap-4 rounded-xl border bg-card p-6 text-center shadow-sm">
+        <div className="flex w-full max-w-md flex-col items-center gap-4 rounded-2xl bg-card p-6 text-center shadow-sm">
           <AlertCircle className="size-8 text-destructive" aria-hidden="true" />
           <p className="text-sm text-muted-foreground">
             {getErrorMessage(error, 'Não foi possível carregar o perfil.')}
@@ -46,6 +51,6 @@ export function PerfilPage() {
       ) : (
         <PerfilCard usuario={usuario} onLogout={handleLogout} />
       )}
-    </main>
+    </div>
   )
 }

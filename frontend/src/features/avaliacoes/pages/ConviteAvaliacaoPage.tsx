@@ -18,36 +18,36 @@ export function ConviteAvaliacaoPage() {
 
   if (isPending) {
     return (
-      <main className="flex min-h-svh items-center justify-center bg-background p-4">
+      <div className="flex w-full flex-col gap-6 p-6 py-10 md:p-8">
         <div
           role="status"
           aria-live="polite"
-          className="flex flex-col items-center gap-2 text-muted-foreground"
+          className="flex flex-col items-start gap-2 text-muted-foreground"
         >
           <Loader2 className="size-6 animate-spin" aria-hidden="true" />
           <span>Carregando convite...</span>
         </div>
-      </main>
+      </div>
     )
   }
 
   if (isError) {
     return (
-      <main className="flex min-h-svh items-center justify-center bg-background p-4">
-        <div className="flex w-full max-w-md flex-col items-center gap-4 rounded-xl border bg-card p-6 text-center shadow-sm">
+      <div className="flex w-full flex-col gap-6 p-6 py-10 md:p-8">
+        <div className="flex w-full max-w-md flex-col items-start gap-4 rounded-2xl bg-card p-6 shadow-sm">
           <AlertCircle className="size-8 text-destructive" aria-hidden="true" />
           <p className="text-sm text-muted-foreground">
             {getErrorMessage(error, 'Não foi possível carregar o convite.')}
           </p>
         </div>
-      </main>
+      </div>
     )
   }
 
   const { investimento, avaliacaoExistente } = data
 
   return (
-    <main className="flex min-h-svh items-start justify-center bg-background p-4 py-10">
+    <div className="flex w-full flex-col gap-6 p-6 py-10 md:p-8">
       {avaliacaoExistente ? (
         <StatusAvaliacaoExistente
           status={avaliacaoExistente.status}
@@ -60,7 +60,7 @@ export function ConviteAvaliacaoPage() {
           onSubmitted={() => refetch()}
         />
       )}
-    </main>
+    </div>
   )
 }
 
@@ -74,7 +74,7 @@ function StatusAvaliacaoExistente({ status, motivoRejeicao }: StatusAvaliacaoExi
   const Icon = meta.icon
 
   return (
-    <div className="flex w-full max-w-2xl flex-col items-center gap-3 rounded-xl border bg-card p-6 text-center shadow-sm">
+    <div className="flex w-full max-w-2xl flex-col items-start gap-3 rounded-2xl bg-card p-6 shadow-sm">
       <Icon className="size-8" aria-hidden="true" />
       <p className="font-medium">Sua avaliação já foi enviada</p>
       <span className={`rounded-full px-3 py-1 text-sm ${meta.className}`}>{meta.label}</span>

@@ -9,9 +9,10 @@ interface ListaPaginada {
 export async function listarPendentes(
   pagina: number,
   tamanhoPagina: number,
+  q?: string,
 ): Promise<ListaPaginada> {
   const { data } = await http.get<ListaPaginada>('/moderacao/pendentes', {
-    params: { pagina, tamanhoPagina },
+    params: { pagina, tamanhoPagina, q },
   })
   return data
 }

@@ -1,4 +1,11 @@
-import { IsInt, IsOptional, Max, Min } from 'class-validator';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class PaginacaoQueryDto {
   @IsOptional()
@@ -15,4 +22,12 @@ export class PaginacaoQueryDto {
   @Min(1)
   @Max(50)
   tamanhoPagina?: number;
+
+  // Busca livre por tipo de produto (e clienteId, na fila de moderacao).
+  // Teto curto de tamanho: e so um filtro de texto, nao ha motivo pra aceitar
+  // string arbitrariamente grande num parametro de query.
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  q?: string;
 }

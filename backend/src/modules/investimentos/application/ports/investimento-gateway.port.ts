@@ -15,4 +15,7 @@ export abstract class InvestimentoGatewayPort {
   abstract buscarInvestimentoEncerrado(
     investimentoId: string,
   ): Promise<InvestimentoEncerrado | null>;
+  abstract listarEncerradosPorCliente(
+    clienteId: string,
+  ): Promise<InvestimentoEncerrado[]>;
 }

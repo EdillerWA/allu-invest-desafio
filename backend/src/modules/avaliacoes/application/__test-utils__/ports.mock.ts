@@ -1,4 +1,7 @@
-import { Avaliacao } from '@modules/avaliacoes/domain/entities/avaliacao.entity';
+import {
+  Avaliacao,
+  StatusAvaliacao,
+} from '@modules/avaliacoes/domain/entities/avaliacao.entity';
 import { DomainEvent } from '@shared/domain/domain-event';
 import { InvestimentoEncerrado } from '@modules/investimentos/application/ports/investimento-gateway.port';
 import {
@@ -31,11 +34,11 @@ export function criarRepositoryMock() {
     buscarPorIdempotencyKey: jest.fn<Promise<Avaliacao | null>, [string]>(),
     listarPorCliente: jest.fn<
       Promise<ResultadoPaginado>,
-      [string, Paginacao]
+      [string, Paginacao, { status?: StatusAvaliacao; q?: string }?]
     >(),
     listarPendentesDeModeracao: jest.fn<
       Promise<ResultadoPaginado>,
-      [Paginacao]
+      [Paginacao, { q?: string }?]
     >(),
     listarPublicasAprovadas: jest.fn<
       Promise<ResultadoPaginado>,
@@ -54,6 +57,10 @@ export function criarInvestimentoGatewayMock() {
   return {
     buscarInvestimentoEncerrado: jest.fn<
       Promise<InvestimentoEncerrado | null>,
+      [string]
+    >(),
+    listarEncerradosPorCliente: jest.fn<
+      Promise<InvestimentoEncerrado[]>,
       [string]
     >(),
   };

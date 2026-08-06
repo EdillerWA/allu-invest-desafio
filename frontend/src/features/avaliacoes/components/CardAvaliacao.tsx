@@ -1,3 +1,4 @@
+import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
 import { STATUS_AVALIACAO_METADATA } from '@/shared/types/avaliacao-status'
@@ -12,10 +13,10 @@ export function CardAvaliacao({ avaliacao }: CardAvaliacaoProps) {
   const Icon = meta.icon
 
   return (
-    <Link to={`/avaliacoes/${avaliacao.id}`}>
-      <Card className="transition-colors hover:bg-accent/50">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between gap-2">
+    <Link to={`/avaliacoes/${avaliacao.id}`} className="group block">
+      <Card className="flex-row items-center gap-4 py-4 transition-colors group-hover:border-primary/40 group-hover:bg-accent/50">
+        <CardHeader className="flex-1 gap-1">
+          <CardTitle className="flex items-center gap-2">
             <span>{avaliacao.investimento.tipoProduto}</span>
             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${meta.className}`}>
               <Icon className="size-3" aria-hidden="true" />
@@ -23,12 +24,16 @@ export function CardAvaliacao({ avaliacao }: CardAvaliacaoProps) {
             </span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
+        <CardContent className="pr-2 text-sm text-muted-foreground">
           {avaliacao.investimento.valorAplicado.toLocaleString('pt-BR', {
             style: 'currency',
             currency: 'BRL',
           })}
         </CardContent>
+        <ChevronRight
+          className="mr-4 size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+          aria-hidden="true"
+        />
       </Card>
     </Link>
   )

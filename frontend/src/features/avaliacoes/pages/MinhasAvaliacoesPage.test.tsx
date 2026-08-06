@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { http, HttpResponse, delay } from 'msw'
-import { renderWithProviders, screen } from '@/test/test-utils'
+import userEvent from '@testing-library/user-event'
+import { renderWithProviders, screen, waitFor, within } from '@/test/test-utils'
 import { server } from '@/test/server'
 import { MinhasAvaliacoesPage } from './MinhasAvaliacoesPage'
 
@@ -58,9 +59,7 @@ describe('MinhasAvaliacoesPage', () => {
 
     renderWithProviders(<MinhasAvaliacoesPage />)
 
-    expect(
-      await screen.findByText('Você ainda não enviou nenhuma avaliação.'),
-    ).toBeInTheDocument()
+    expect(await screen.findByText('Nenhuma avaliação ainda')).toBeInTheDocument()
   })
 
   it('lista as avaliacoes reais retornadas pela API', async () => {
@@ -73,6 +72,44 @@ describe('MinhasAvaliacoesPage', () => {
     renderWithProviders(<MinhasAvaliacoesPage />)
 
     expect(await screen.findByText('Tesouro Selic')).toBeInTheDocument()
-    expect(screen.getByText('Aprovada')).toBeInTheDocument()
+    expect(within(screen.getByRole('link')).getByText('Aprovada')).toBeInTheDocument()
+  })
+
+  it('reenvia a listagem com o status escolhido no filtro de chips', async () => {
+    const statusRecebidos: (string | null)[] = []
+    server.use(
+      http.get(`${BASE}/avaliacoes`, ({ request }) => {
+        const url = new URL(request.url)
+        statusRecebidos.push(url.searchParams.get('status'))
+        return HttpResponse.json({ itens: [AVALIACAO], total: 1 })
+      }),
+    )
+
+    const user = userEvent.setup()
+    renderWithProviders(<MinhasAvaliacoesPage />)
+    await screen.findByText('Tesouro Selic')
+
+    await user.click(screen.getByRole('button', { name: 'Rejeitada' }))
+
+    await waitFor(() => expect(statusRecebidos).toContain('REJEITADA'))
+  })
+
+  it('reenvia a listagem com o texto de busca digitado (debounced)', async () => {
+    const buscasRecebidas: (string | null)[] = []
+    server.use(
+      http.get(`${BASE}/avaliacoes`, ({ request }) => {
+        const url = new URL(request.url)
+        buscasRecebidas.push(url.searchParams.get('q'))
+        return HttpResponse.json({ itens: [AVALIACAO], total: 1 })
+      }),
+    )
+
+    const user = userEvent.setup()
+    renderWithProviders(<MinhasAvaliacoesPage />)
+    await screen.findByText('Tesouro Selic')
+
+    await user.type(screen.getByPlaceholderText('Buscar por produto...'), 'CDB')
+
+    await waitFor(() => expect(buscasRecebidas).toContain('CDB'), { timeout: 2000 })
   })
 })
