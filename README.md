@@ -13,7 +13,7 @@ Desafio técnico para vaga de Desenvolvedor(a) Full Stack Pleno na allu: cliente
 - [x] API REST (controllers, DTOs, exception filter global)
 - [x] Testes automatizados do backend (unitários — ver seção de limitações para o e2e)
 - [x] Frontend (React) — tela de submissão de avaliação funcional, ponta a ponta contra o backend real; painel de moderação, listagem e detalhe ainda pendentes
-- [ ] Documentação final de decisões arquiteturais consolidada
+- [x] Documentação final de decisões arquiteturais consolidada (`RELATORIO_DECISOES.md`)
 
 O backend está funcionalmente completo e testado (unitário + manual ponta a ponta). O frontend tem bootstrap, autenticação real e a tela de submissão de avaliação funcionando (validada manualmente contra o backend real); painel de moderação, listagem de avaliações e tela de detalhe ficaram de fora por corte de escopo em cima do prazo — ver `frontend/RELATORIO_EMERGENCIA.md`.
 
@@ -28,6 +28,7 @@ O backend está funcionalmente completo e testado (unitário + manual ponta a po
 
 DDD-flavored, monolito modular por bounded context (`identity`, `avaliacoes`, `investimentos`), com `domain/` → `application/` (commands/queries + handlers, sem `@nestjs/cqrs`) → `infrastructure/` → `presentation/` (controllers/DTOs) em cada módulo. Detalhes e porquês:
 
+- `RELATORIO_DECISOES.md` — premissas assumidas, decisões de arquitetura e cortes de escopo de todo o projeto, com a justificativa de cada um.
 - `backend/docs/AUTH_FLOW.md` — por que Bearer token, por que sem `/login`, o que foi testado e como.
 - `backend/docs/DATA_MODEL.md` — schema Prisma, por que snapshot do investimento é congelado na avaliação, por que RLS.
 - `backend/docs/ACHADOS_PENDENTES.md` — 2 lacunas conhecidas e não corrigidas (ver seção "Limitações conhecidas" abaixo).
