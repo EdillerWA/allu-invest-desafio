@@ -6,7 +6,10 @@ import {
   MotivoEncerramento,
 } from '@modules/avaliacoes/domain/entities/avaliacao.entity';
 import { MotivoRejeicaoObrigatorioError } from '@modules/avaliacoes/domain/errors/avaliacao.errors';
-import { AvaliacaoNaoEncontradaError } from '../../errors/orquestracao.errors';
+import {
+  AvaliacaoNaoEncontradaError,
+  ConflitoDeModeracaoError,
+} from '../../errors/orquestracao.errors';
 import { RejeitarAvaliacaoHandler } from './rejeitar-avaliacao.handler';
 import { RejeitarAvaliacaoCommand } from './rejeitar-avaliacao.command';
 import {
@@ -81,7 +84,11 @@ describe('RejeitarAvaliacaoHandler', () => {
     );
 
     expect(resultado.status).toBe(StatusAvaliacao.REJEITADA);
-    expect(repository.salvar).toHaveBeenCalledWith(avaliacao);
+    expect(resultado.motivoRejeicao).toBe('Comentario ofensivo');
+    expect(repository.salvar).toHaveBeenCalledWith(
+      avaliacao,
+      StatusAvaliacao.ENVIADA,
+    );
     expect(eventoPublicado?.nomeEvento).toBe('avaliacao.moderada');
   });
 
@@ -113,5 +120,24 @@ describe('RejeitarAvaliacaoHandler', () => {
       ),
     ).rejects.toThrow(MotivoRejeicaoObrigatorioError);
     expect(repository.salvar).not.toHaveBeenCalled();
+  });
+
+  it('propaga ConflitoDeModeracaoError quando o repositorio nao encontra a linha no status esperado (moderacao concorrente)', async () => {
+    const repository = criarRepositoryMock();
+    const eventPublisher = criarEventPublisherMock();
+    const avaliacao = criarAvaliacaoEnviada();
+    repository.buscarPorId.mockResolvedValue(avaliacao);
+    repository.salvar.mockRejectedValue(
+      new ConflitoDeModeracaoError(avaliacao.id),
+    );
+
+    const handler = new RejeitarAvaliacaoHandler(repository, eventPublisher);
+
+    await expect(
+      handler.executar(
+        new RejeitarAvaliacaoCommand('avaliacao-1', 'moderador-1', 'motivo'),
+      ),
+    ).rejects.toThrow(ConflitoDeModeracaoError);
+    expect(eventPublisher.publicar).not.toHaveBeenCalled();
   });
 });

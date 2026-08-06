@@ -6,7 +6,10 @@ import {
   MotivoEncerramento,
 } from '@modules/avaliacoes/domain/entities/avaliacao.entity';
 import { TransicaoInvalidaError } from '@modules/avaliacoes/domain/errors/avaliacao.errors';
-import { AvaliacaoNaoEncontradaError } from '../../errors/orquestracao.errors';
+import {
+  AvaliacaoNaoEncontradaError,
+  ConflitoDeModeracaoError,
+} from '../../errors/orquestracao.errors';
 import { AprovarAvaliacaoHandler } from './aprovar-avaliacao.handler';
 import { AprovarAvaliacaoCommand } from './aprovar-avaliacao.command';
 import {
@@ -77,7 +80,10 @@ describe('AprovarAvaliacaoHandler', () => {
     );
 
     expect(resultado.status).toBe(StatusAvaliacao.APROVADA);
-    expect(repository.salvar).toHaveBeenCalledWith(avaliacao);
+    expect(repository.salvar).toHaveBeenCalledWith(
+      avaliacao,
+      StatusAvaliacao.ENVIADA,
+    );
     expect(eventoPublicado?.nomeEvento).toBe('avaliacao.moderada');
   });
 
@@ -109,5 +115,24 @@ describe('AprovarAvaliacaoHandler', () => {
       ),
     ).rejects.toThrow(TransicaoInvalidaError);
     expect(repository.salvar).not.toHaveBeenCalled();
+  });
+
+  it('propaga ConflitoDeModeracaoError quando o repositorio nao encontra a linha no status esperado (moderacao concorrente)', async () => {
+    const repository = criarRepositoryMock();
+    const eventPublisher = criarEventPublisherMock();
+    const avaliacao = criarAvaliacaoEnviada();
+    repository.buscarPorId.mockResolvedValue(avaliacao);
+    repository.salvar.mockRejectedValue(
+      new ConflitoDeModeracaoError(avaliacao.id),
+    );
+
+    const handler = new AprovarAvaliacaoHandler(repository, eventPublisher);
+
+    await expect(
+      handler.executar(
+        new AprovarAvaliacaoCommand('avaliacao-1', 'moderador-1'),
+      ),
+    ).rejects.toThrow(ConflitoDeModeracaoError);
+    expect(eventPublisher.publicar).not.toHaveBeenCalled();
   });
 });

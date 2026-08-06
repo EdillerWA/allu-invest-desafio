@@ -22,6 +22,12 @@ export class RejeitarAvaliacaoHandler {
       throw new AvaliacaoNaoEncontradaError(command.avaliacaoId);
     }
 
+    // Status lido agora, antes de qualquer transicao em memoria — e o que
+    // o repositorio confere contra o banco no momento da escrita, pra
+    // detectar se outra requisicao moderou esta avaliacao nesse meio-tempo
+    // (ver ConflitoDeModeracaoError).
+    const statusLido = avaliacao.status;
+
     if (avaliacao.status === StatusAvaliacao.ENVIADA) {
       avaliacao.enviarParaModeracao();
     }
@@ -29,7 +35,7 @@ export class RejeitarAvaliacaoHandler {
     //Motivo obrigatorio ja validado dentro da entidade (MotivoRejeicaoObrigatorioError)
     avaliacao.rejeitar(command.moderadorId, command.motivo);
 
-    await this.repository.salvar(avaliacao);
+    await this.repository.salvar(avaliacao, statusLido);
 
     for (const evento of avaliacao.liberarEventos()) {
       this.eventPublisher.publicar(evento);

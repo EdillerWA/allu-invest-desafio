@@ -37,6 +37,7 @@ export interface AvaliacaoPersistida {
   investimentoMotivoEncerramento: MotivoEncerramento;
   status: StatusAvaliacao;
   comentario: string | null;
+  motivoRejeicao: string | null;
   politicaVersaoAceita: string;
   politicaAceitaEm: Date | null;
   idempotencyKey: string | null;
@@ -73,6 +74,7 @@ export function paraDominio(registro: AvaliacaoPersistida): Avaliacao {
     },
     status: registro.status,
     comentario: registro.comentario,
+    motivoRejeicao: registro.motivoRejeicao,
     notas,
     anexos,
     aceitePolitica: AceitePolitica.reconstituir(
@@ -94,6 +96,7 @@ export interface DadosCriacaoAvaliacao {
   investimentoMotivoEncerramento: MotivoEncerramento;
   status: StatusAvaliacao;
   comentario: string | null;
+  motivoRejeicao: string | null;
   politicaVersaoAceita: string;
   politicaAceitaEm: Date;
   idempotencyKey: string | null;
@@ -130,6 +133,7 @@ export function paraPersistenciaCreate(
       avaliacao.snapshotInvestimento.motivoEncerramento,
     status: avaliacao.status,
     comentario: avaliacao.comentario,
+    motivoRejeicao: avaliacao.motivoRejeicao,
     politicaVersaoAceita: aceitePolitica.obterVersao(),
     politicaAceitaEm: aceitePolitica.obterDataAceite(),
     idempotencyKey: avaliacao.idempotencyKey,
@@ -152,15 +156,18 @@ export function paraPersistenciaCreate(
 
 export interface DadosAtualizacaoAvaliacao {
   status: StatusAvaliacao;
+  motivoRejeicao: string | null;
 }
 
-// Todo caso de uso que passa por aqui (aprovar/rejeitar) so muda status —
-// comentario/notas/anexos/politica ja estao fixos desde a primeira escrita
-// (que so acontece depois de submeter(), nunca antes).
+// Todo caso de uso que passa por aqui (aprovar/rejeitar) so muda status e,
+// no caso de rejeitar, motivoRejeicao — comentario/notas/anexos/politica ja
+// estao fixos desde a primeira escrita (que so acontece depois de
+// submeter(), nunca antes).
 export function paraPersistenciaUpdate(
   avaliacao: Avaliacao,
 ): DadosAtualizacaoAvaliacao {
   return {
     status: avaliacao.status,
+    motivoRejeicao: avaliacao.motivoRejeicao,
   };
 }

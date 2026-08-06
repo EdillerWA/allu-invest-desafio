@@ -5,12 +5,13 @@ import { STATUS_AVALIACAO_METADATA } from '@/shared/types/avaliacao-status'
 import { getErrorMessage } from '@/shared/types/api-error'
 import { obterConvite } from '../services/avaliacoes.service'
 import { FormularioAvaliacao } from '../components/FormularioAvaliacao'
+import { avaliacoesKeys } from '../lib/query-keys'
 
 export function ConviteAvaliacaoPage() {
   const { investimentoId } = useParams<{ investimentoId: string }>()
 
   const { data, isPending, isError, error, refetch } = useQuery({
-    queryKey: ['avaliacoes', 'convite', investimentoId],
+    queryKey: avaliacoesKeys.convite(investimentoId as string),
     queryFn: () => obterConvite(investimentoId as string),
     enabled: investimentoId !== undefined,
   })
@@ -48,7 +49,10 @@ export function ConviteAvaliacaoPage() {
   return (
     <main className="flex min-h-svh items-start justify-center bg-background p-4 py-10">
       {avaliacaoExistente ? (
-        <StatusAvaliacaoExistente status={avaliacaoExistente.status} />
+        <StatusAvaliacaoExistente
+          status={avaliacaoExistente.status}
+          motivoRejeicao={avaliacaoExistente.motivoRejeicao}
+        />
       ) : (
         <FormularioAvaliacao
           investimentoId={investimentoId as string}
@@ -60,7 +64,12 @@ export function ConviteAvaliacaoPage() {
   )
 }
 
-function StatusAvaliacaoExistente({ status }: { status: keyof typeof STATUS_AVALIACAO_METADATA }) {
+interface StatusAvaliacaoExistenteProps {
+  status: keyof typeof STATUS_AVALIACAO_METADATA
+  motivoRejeicao: string | null
+}
+
+function StatusAvaliacaoExistente({ status, motivoRejeicao }: StatusAvaliacaoExistenteProps) {
   const meta = STATUS_AVALIACAO_METADATA[status]
   const Icon = meta.icon
 
@@ -73,6 +82,11 @@ function StatusAvaliacaoExistente({ status }: { status: keyof typeof STATUS_AVAL
         Ela passa por moderação antes de qualquer publicação. Você será informado quando o status
         mudar.
       </p>
+      {motivoRejeicao && (
+        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          Motivo: {motivoRejeicao}
+        </p>
+      )}
     </div>
   )
 }

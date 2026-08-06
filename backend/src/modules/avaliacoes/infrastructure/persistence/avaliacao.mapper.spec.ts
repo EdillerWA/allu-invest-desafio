@@ -174,7 +174,7 @@ describe('avaliacao.mapper', () => {
   });
 
   describe('paraPersistenciaUpdate', () => {
-    it('so inclui o status, nada de notas/anexos/comentario', () => {
+    it('so inclui status e motivoRejeicao, nada de notas/anexos/comentario', () => {
       const avaliacao = Avaliacao.criarConvite({
         id: 'avaliacao-1',
         investimentoId: 'investimento-1',
@@ -190,7 +190,37 @@ describe('avaliacao.mapper', () => {
 
       const dados = paraPersistenciaUpdate(avaliacao);
 
-      expect(dados).toEqual({ status: StatusAvaliacao.RASCUNHO });
+      expect(dados).toEqual({
+        status: StatusAvaliacao.RASCUNHO,
+        motivoRejeicao: null,
+      });
+    });
+
+    it('inclui o motivoRejeicao quando a avaliacao foi rejeitada', () => {
+      const avaliacao = Avaliacao.criarConvite({
+        id: 'avaliacao-1',
+        investimentoId: 'investimento-1',
+        clienteId: 'cliente-1',
+        snapshotInvestimento: {
+          tipoProduto: 'CDB',
+          valorAplicado: 100,
+          dataAplicacao: DATA_APLICACAO,
+          dataEncerramento: DATA_ENCERRAMENTO,
+          motivoEncerramento: MotivoEncerramento.VENCIMENTO,
+        },
+      });
+      avaliacao.definirNota(TipoCriterio.ATENDIMENTO, 5);
+      avaliacao.aceitarPolitica('v1');
+      avaliacao.submeter();
+      avaliacao.enviarParaModeracao();
+      avaliacao.rejeitar('moderador-1', 'Comentario nao condiz com a nota');
+
+      const dados = paraPersistenciaUpdate(avaliacao);
+
+      expect(dados).toEqual({
+        status: StatusAvaliacao.REJEITADA,
+        motivoRejeicao: 'Comentario nao condiz com a nota',
+      });
     });
   });
 

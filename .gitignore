@@ -13,6 +13,6 @@ backend/uploads/
 .windsurf/
 skills-lock.json
 
-docs/
+backend/docs/
 
 keys/

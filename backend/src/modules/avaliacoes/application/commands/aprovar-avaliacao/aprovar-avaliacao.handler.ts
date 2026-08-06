@@ -22,6 +22,12 @@ export class AprovarAvaliacaoHandler {
       throw new AvaliacaoNaoEncontradaError(command.avaliacaoId);
     }
 
+    // Status lido agora, antes de qualquer transicao em memoria — e o que
+    // o repositorio confere contra o banco no momento da escrita, pra
+    // detectar se outra requisicao moderou esta avaliacao nesse meio-tempo
+    // (ver ConflitoDeModeracaoError).
+    const statusLido = avaliacao.status;
+
     //Transicoes invalidas (ex: aprovar direto de RASCUNHO) sao rejeitadas
     //pela propria state machine da entidade, nao precisa duplicar aqui
     if (avaliacao.status === StatusAvaliacao.ENVIADA) {
@@ -30,7 +36,7 @@ export class AprovarAvaliacaoHandler {
 
     avaliacao.aprovar(command.moderadorId);
 
-    await this.repository.salvar(avaliacao);
+    await this.repository.salvar(avaliacao, statusLido);
 
     for (const evento of avaliacao.liberarEventos()) {
       this.eventPublisher.publicar(evento);

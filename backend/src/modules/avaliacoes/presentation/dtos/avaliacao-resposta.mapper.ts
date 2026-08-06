@@ -9,6 +9,7 @@ export interface AvaliacaoResposta {
   clienteId: string;
   status: string;
   comentario: string | null;
+  motivoRejeicao: string | null;
   notas: { criterio: TipoCriterio; valor: number }[];
   anexos: { nomeOriginal: string; tipoMime: string; tamanhoBytes: number }[];
   aceitePolitica: { versao: string; dataAceite: Date } | null;
@@ -34,6 +35,7 @@ export function paraResposta(avaliacao: Avaliacao): AvaliacaoResposta {
     clienteId: avaliacao.clienteId,
     status: avaliacao.status,
     comentario: avaliacao.comentario,
+    motivoRejeicao: avaliacao.motivoRejeicao,
     notas: [...avaliacao.notas.entries()].map(([criterio, nota]) => ({
       criterio,
       valor: nota.obterValor(),

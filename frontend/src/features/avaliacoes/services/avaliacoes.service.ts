@@ -6,6 +6,26 @@ export async function obterConvite(investimentoId: string): Promise<ConviteAvali
   return data
 }
 
+interface ListaPaginada {
+  itens: AvaliacaoResposta[]
+  total: number
+}
+
+export async function listarMinhas(
+  pagina: number,
+  tamanhoPagina: number,
+): Promise<ListaPaginada> {
+  const { data } = await http.get<ListaPaginada>('/avaliacoes', {
+    params: { pagina, tamanhoPagina },
+  })
+  return data
+}
+
+export async function obterPorId(id: string): Promise<AvaliacaoResposta> {
+  const { data } = await http.get<AvaliacaoResposta>(`/avaliacoes/${id}`)
+  return data
+}
+
 interface CriarAvaliacaoInput {
   investimentoId: string
   notas: NotaInput[]

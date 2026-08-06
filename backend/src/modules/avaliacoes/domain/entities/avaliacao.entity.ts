@@ -69,6 +69,7 @@ interface PropsAvaliacao {
   anexos: Anexo[];
   aceitePolitica: AceitePolitica | null;
   idempotencyKey: string | null;
+  motivoRejeicao: string | null;
 }
 
 export class Avaliacao extends AggregateRoot {
@@ -95,6 +96,7 @@ export class Avaliacao extends AggregateRoot {
       anexos: [],
       aceitePolitica: null,
       idempotencyKey: null,
+      motivoRejeicao: null,
     });
   }
 
@@ -180,6 +182,7 @@ export class Avaliacao extends AggregateRoot {
     }
 
     this.props.status = StatusAvaliacao.REJEITADA;
+    this.props.motivoRejeicao = motivo;
 
     this.registrarEvento(
       new AvaliacaoModeradaEvent(
@@ -242,6 +245,10 @@ export class Avaliacao extends AggregateRoot {
 
   get idempotencyKey(): string | null {
     return this.props.idempotencyKey;
+  }
+
+  get motivoRejeicao(): string | null {
+    return this.props.motivoRejeicao;
   }
 
   get snapshotInvestimento(): Readonly<SnapshotInvestimento> {

@@ -11,11 +11,11 @@ Desafio técnico para vaga de Desenvolvedor(a) Full Stack Pleno na allu: cliente
 - [x] Casos de uso (submeter, aprovar, rejeitar, listar, obter convite)
 - [x] Persistência real com Row-Level Security (Postgres RLS) ativo
 - [x] API REST (controllers, DTOs, exception filter global)
-- [x] Testes automatizados do backend (unitários — ver seção de limitações para o e2e)
-- [x] Frontend (React) — tela de submissão de avaliação funcional, ponta a ponta contra o backend real; painel de moderação, listagem e detalhe ainda pendentes
+- [x] Testes automatizados do backend (124 unitários + e2e real contra guards/exception filter)
+- [x] Frontend (React) — submissão, painel de moderação, listagem de avaliações e tela de detalhe, todos funcionais ponta a ponta contra o backend real
 - [x] Documentação final de decisões arquiteturais consolidada (`RELATORIO_DECISOES.md`)
 
-O backend está funcionalmente completo e testado (unitário + manual ponta a ponta). O frontend tem bootstrap, autenticação real e a tela de submissão de avaliação funcionando (validada manualmente contra o backend real); painel de moderação, listagem de avaliações e tela de detalhe ficaram de fora por corte de escopo em cima do prazo — ver `frontend/RELATORIO_EMERGENCIA.md`.
+O backend está funcionalmente completo e testado (unitário + e2e + manual ponta a ponta, incluindo prova de concorrência real). O frontend cobre as quatro telas de negócio (submissão, moderação, listagem, detalhe), com teste automatizado cobrindo carregamento/erro/vazio/sucesso e validação manual contra o backend real — histórico completo do corte de escopo original e do fechamento posterior em `RELATORIO_DECISOES.md`.
 
 ## Stack
 
@@ -31,7 +31,7 @@ DDD-flavored, monolito modular por bounded context (`identity`, `avaliacoes`, `i
 - `RELATORIO_DECISOES.md` — premissas assumidas, decisões de arquitetura e cortes de escopo de todo o projeto, com a justificativa de cada um.
 - `backend/docs/AUTH_FLOW.md` — por que Bearer token, por que sem `/login`, o que foi testado e como.
 - `backend/docs/DATA_MODEL.md` — schema Prisma, por que snapshot do investimento é congelado na avaliação, por que RLS.
-- `backend/docs/ACHADOS_PENDENTES.md` — 2 lacunas conhecidas e não corrigidas (ver seção "Limitações conhecidas" abaixo).
+- `backend/docs/ACHADOS_PENDENTES.md` — registro histórico de 2 lacunas encontradas durante o desenvolvimento (motivo de rejeição não persistido, moderação concorrente sem lock), ambas corrigidas depois — ver `RELATORIO_DECISOES.md`.
 
 ---
 
@@ -114,10 +114,9 @@ Sobe em `http://localhost:3000/api`. Log de sucesso esperado: `Nest application 
 cd backend
 pnpm run build   # confirma que compila
 pnpm run lint    # zero warnings/erros
-pnpm test        # 121 testes, todos unitários (mocks nas portas — sem tocar banco real)
+pnpm test        # 124 testes, todos unitários (mocks nas portas — sem tocar banco real)
+pnpm run test:e2e  # 3 testes, app real de ponta a ponta (guards, prefixo /api, exception filter)
 ```
-
-> `pnpm run test:e2e` está quebrado hoje — ver "Limitações conhecidas" abaixo antes de tentar rodá-lo.
 
 ### Fluxo manual completo (ponta a ponta, contra o servidor real)
 
@@ -202,9 +201,14 @@ Todas sob o prefixo `/api`. Autenticação via `Authorization: Bearer <token>` e
 
 ## Frontend
 
-O frontend vive em `frontend/`, já mesclado em `main`. Estado atual: bootstrap completo (Vite, Tailwind, shadcn/ui, TanStack Query, roteamento), autenticação real contra `GET /api/me` (tela de login cola o token gerado pelo script acima), e a tela de submissão de avaliação (`/investimentos/:investimentoId/avaliar`) funcional — informações do investimento, notas por critério, comentário, upload de anexo e aceite de política, submetendo via `POST /avaliacoes` e mostrando o status quando já existe avaliação para aquele investimento.
+O frontend vive em `frontend/`, já mesclado em `main`. Bootstrap completo (Vite, Tailwind, shadcn/ui, TanStack Query, roteamento), autenticação real contra `GET /api/me` (tela de login cola o token gerado pelo script acima), e as quatro telas de negócio funcionais:
 
-Painel de moderação, listagem de "minhas avaliações" e tela de detalhe não foram implementados — corte de escopo em cima do prazo, detalhado em `frontend/RELATORIO_EMERGENCIA.md`.
+- `/investimentos/:investimentoId/avaliar` — convite e submissão: informações do investimento, notas por critério, comentário, upload de anexo e aceite de política via `POST /avaliacoes`; mostra o status (incluindo motivo, se rejeitada) quando já existe avaliação para aquele investimento, em vez do formulário.
+- `/minhas-avaliacoes` — listagem paginada das próprias avaliações do cliente.
+- `/avaliacoes/:id` — detalhe de uma avaliação (notas, comentário, anexos, motivo de rejeição quando houver); 404 genérico se não existe ou não pertence ao cliente autenticado.
+- `/moderacao` — painel de moderação (fila paginada, aprovar, rejeitar com motivo obrigatório), atrás de `RoleGuardedRoute` — só usuário com papel `MODERADOR` acessa, os demais são redirecionados.
+
+Teste automatizado (Vitest + MSW, backend real nunca tocado) cobre carregamento, erro, estado vazio e sucesso das três telas mais recentes, incluindo o tratamento do conflito de moderação concorrente (409) como caso de erro distinto, não genérico.
 
 Para rodar:
 
@@ -213,19 +217,10 @@ cd frontend
 cp .env.example .env   # já aponta pra http://localhost:3000/api
 pnpm install
 pnpm run dev
+pnpm test:run           # 16 testes
 ```
 
 Abre em `http://localhost:5173`. Precisa do backend rodando (seção anterior).
-
-## Limitações conhecidas
-
-Registradas aqui por transparência — nenhuma delas é acidental/despercebida, todas foram encontradas e documentadas durante revisão crítica, e a decisão de não corrigir agora foi deliberada (mexem em código já commitado, exigem decisão de desenho):
-
-1. **Motivo de rejeição não é persistido.** `POST /moderacao/:id/rejeitar` aceita e valida o motivo, mas ele só existe dentro de um evento de domínio efêmero (sem listener) — não aparece em nenhum `GET` posterior. Corrigir exige nova coluna + migration.
-2. **Aprovação/rejeição concorrente não tem lock otimista.** Duas requisições simultâneas de moderação sobre a mesma avaliação não geram erro — a segunda simplesmente sobrescreve a primeira (last-write-wins), incluindo dois eventos de domínio publicados para uma ação que deveria ser única. Confirmado empiricamente (não é suposição). Diferente da submissão de avaliação, que É protegida por constraint `@unique` no banco.
-3. **`pnpm run test:e2e` está quebrado** — `test/jest-e2e.json` não tem os path aliases (`@shared/*`, `@modules/*`) configurados, então a suíte falha na importação antes mesmo de rodar qualquer teste. Pré-existente ao trabalho recente, nunca coberto pelos módulos implementados até aqui. O e2e-spec padrão do Nest (`GET /` → "Hello World!") também está desatualizado — não existe mais rota raiz nessa API.
-
-Detalhes técnicos completos dos itens 1 e 2 em `backend/docs/ACHADOS_PENDENTES.md`.
 
 ## Autor
 

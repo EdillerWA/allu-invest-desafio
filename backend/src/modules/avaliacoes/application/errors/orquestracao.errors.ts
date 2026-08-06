@@ -62,3 +62,19 @@ export class IdempotencyKeyEmUsoError extends ApplicationError {
     super('Esta chave de idempotencia ja esta em uso por outra avaliacao.');
   }
 }
+
+// Duas acoes de moderacao concorrentes sobre a mesma avaliacao: o
+// repositorio so aplica o UPDATE se o status no banco ainda for o mesmo que
+// foi lido antes da transicao (ver PrismaAvaliacaoRepository.salvar). Se a
+// segunda requisicao chegar depois que a primeira ja mudou o status, o
+// UPDATE afeta 0 linhas e o repositorio lanca este erro em vez de
+// sobrescrever silenciosamente o resultado da primeira.
+export class ConflitoDeModeracaoError extends ApplicationError {
+  readonly code = 'CONFLITO_DE_MODERACAO';
+
+  constructor(avaliacaoId: string) {
+    super(
+      `Avaliacao ${avaliacaoId} ja foi moderada por outra requisicao concorrente.`,
+    );
+  }
+}

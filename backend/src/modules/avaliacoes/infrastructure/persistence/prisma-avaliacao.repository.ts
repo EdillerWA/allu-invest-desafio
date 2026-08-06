@@ -21,6 +21,7 @@ import {
   PersistenciaFalhouError,
   PersistenciaIndisponivelError,
 } from './persistencia.errors';
+import { ConflitoDeModeracaoError } from '../../application/errors/orquestracao.errors';
 
 type Paginacao = { pagina: number; tamanhoPagina: number };
 
@@ -50,6 +51,7 @@ interface LinhaComRelacoes {
   investimentoMotivoEncerramento: MotivoEncerramentoExterno;
   status: StatusPersistido;
   comentario: string | null;
+  motivoRejeicao: string | null;
   politicaVersaoAceita: string;
   politicaAceitaEm: Date | null;
   idempotencyKey: string | null;
@@ -104,7 +106,10 @@ export class PrismaAvaliacaoRepository implements AvaliacaoRepositoryPort {
     private readonly requestContext: RequestContextProvider,
   ) {}
 
-  async salvar(avaliacao: Avaliacao): Promise<void> {
+  async salvar(
+    avaliacao: Avaliacao,
+    statusEsperado?: StatusAvaliacao,
+  ): Promise<void> {
     try {
       await this.executarComContexto(async (tx) => {
         const existente = await tx.avaliacao.findUnique({
@@ -112,10 +117,25 @@ export class PrismaAvaliacaoRepository implements AvaliacaoRepositoryPort {
         });
 
         if (existente) {
-          await tx.avaliacao.update({
-            where: { id: avaliacao.id },
-            data: paraPersistenciaUpdate(avaliacao),
-          });
+          if (statusEsperado) {
+            // updateMany (nao update) porque o WHERE inclui status: so
+            // assim da pra saber, pelo count, se a linha ainda estava no
+            // status esperado no momento da escrita — update() com um
+            // WHERE que nao bate simplesmente lançaria "record not found",
+            // nao devolveria uma contagem pra diferenciar dos outros erros.
+            const resultado = await tx.avaliacao.updateMany({
+              where: { id: avaliacao.id, status: statusEsperado },
+              data: paraPersistenciaUpdate(avaliacao),
+            });
+            if (resultado.count === 0) {
+              throw new ConflitoDeModeracaoError(avaliacao.id);
+            }
+          } else {
+            await tx.avaliacao.update({
+              where: { id: avaliacao.id },
+              data: paraPersistenciaUpdate(avaliacao),
+            });
+          }
         } else {
           await tx.avaliacao.create({
             data: paraPersistenciaCreate(avaliacao),
@@ -306,6 +326,13 @@ export class PrismaAvaliacaoRepository implements AvaliacaoRepositoryPort {
   }
 
   private traduzirErroDePersistencia(erro: unknown): Error {
+    // Lançado por nos mesmos dentro da transacao (ver salvar() acima), nao
+    // e falha de infraestrutura — precisa propagar intacto pro handler
+    // decidir, igual ao P2002 de idempotencia logo abaixo.
+    if (erro instanceof ConflitoDeModeracaoError) {
+      return erro;
+    }
+
     if (erro instanceof Prisma.PrismaClientKnownRequestError) {
       // P2002 (constraint unica) precisa propagar intacto: e o handler
       // (SubmeterAvaliacaoHandler) quem decide o que fazer com isso —

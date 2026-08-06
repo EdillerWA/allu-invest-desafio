@@ -3,6 +3,10 @@ import { Route, Routes, useLocation } from 'react-router'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { PerfilPage } from '@/features/perfil/pages/PerfilPage'
 import { ConviteAvaliacaoPage } from '@/features/avaliacoes/pages/ConviteAvaliacaoPage'
+import { MinhasAvaliacoesPage } from '@/features/avaliacoes/pages/MinhasAvaliacoesPage'
+import { DetalheAvaliacaoPage } from '@/features/avaliacoes/pages/DetalheAvaliacaoPage'
+import { PainelModeracaoPage } from '@/features/moderacao/pages/PainelModeracaoPage'
+import { RoleGuardedRoute } from '@/shared/components/RoleGuardedRoute'
 import { AnimatedPage } from './AnimatedPage'
 import { NotFoundPage } from './NotFoundPage'
 import { ProtectedRoute } from './ProtectedRoute'
@@ -40,6 +44,32 @@ export function AppRoutes() {
               </AnimatedPage>
             }
           />
+          <Route
+            path="/minhas-avaliacoes"
+            element={
+              <AnimatedPage>
+                <MinhasAvaliacoesPage />
+              </AnimatedPage>
+            }
+          />
+          <Route
+            path="/avaliacoes/:id"
+            element={
+              <AnimatedPage>
+                <DetalheAvaliacaoPage />
+              </AnimatedPage>
+            }
+          />
+          <Route element={<RoleGuardedRoute role="MODERADOR" />}>
+            <Route
+              path="/moderacao"
+              element={
+                <AnimatedPage>
+                  <PainelModeracaoPage />
+                </AnimatedPage>
+              }
+            />
+          </Route>
         </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

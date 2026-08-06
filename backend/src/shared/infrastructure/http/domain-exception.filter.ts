@@ -11,6 +11,7 @@ import { DomainError } from '@modules/avaliacoes/domain/errors/avaliacao.errors'
 import {
   ApplicationError,
   AvaliacaoNaoEncontradaError,
+  ConflitoDeModeracaoError,
   IdempotencyKeyEmUsoError,
   InvestimentoNaoEncontradoError,
   InvestimentoNaoPertenceAoClienteError,
@@ -44,9 +45,10 @@ const ERROS_404 = [
   InvestimentoNaoEncontradoError,
 ];
 
-// Conflito de estado (chave de idempotencia em uso por outro dono), nao
-// "nao encontrado" nem "requisicao invalida".
-const ERROS_409 = [IdempotencyKeyEmUsoError];
+// Conflito de estado (chave de idempotencia em uso por outro dono, ou
+// moderacao concorrente que ja mudou o status), nao "nao encontrado" nem
+// "requisicao invalida".
+const ERROS_409 = [IdempotencyKeyEmUsoError, ConflitoDeModeracaoError];
 
 // Violacoes de invariante de dominio ou de pre-condicao do caso de uso —
 // sempre culpa do payload/estado enviado pelo cliente.

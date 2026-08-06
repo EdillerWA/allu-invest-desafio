@@ -60,6 +60,12 @@ model Avaliacao {
 
   comentario String? @db.Text
 
+  // Nullable, sem valor padrao: motivo so existe a partir da rejeicao;
+  // avaliacoes REJEITADA anteriores a esta coluna nao tem esse dado
+  // recuperavel em lugar nenhum (o motivo so vivia num evento de dominio
+  // sem listener) — NULL representa "nao capturado", nao "vazio".
+  motivoRejeicao String? @db.Text
+
   politicaVersaoAceita String
   politicaAceitaEm     DateTime?
 
