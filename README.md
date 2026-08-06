@@ -1,37 +1,230 @@
-﻿# allu invest - Avaliacao de Experiencia de Investimento
+# allu invest — Avaliação de Experiência de Investimento
 
-Desafio tecnico para vaga de Desenvolvedor(a) Full Stack Pleno na allu.
+Desafio técnico para vaga de Desenvolvedor(a) Full Stack Pleno na allu: clientes avaliam investimentos já encerrados (nota por critério, comentário, anexos), e as avaliações passam por moderação antes de qualquer publicação.
 
 ## Status
 
-Projeto em desenvolvimento. Este README sera expandido conforme as etapas avancam.
-
 - [x] Setup de infraestrutura (Docker, PostgreSQL, Prisma, NestJS, Vite)
-- [x] Schema de dados (avaliacoes, notas por criterio, anexos, log de auditoria)
-- [ ] Autenticacao e autorizacao (JWT RS256, RBAC)
-- [ ] Dominio (aggregate Avaliacao, regras de negocio)
-- [ ] Casos de uso (submeter, moderar, listar)
-- [ ] API REST (controllers, DTOs)
-- [ ] Frontend (React)
-- [ ] Testes automatizados
-- [ ] Documentacao final de decisoes arquiteturais
+- [x] Schema de dados (avaliações, notas por critério, anexos, log de auditoria)
+- [x] Autenticação e autorização (JWT RS256, RBAC) — backend
+- [x] Domínio (aggregate `Avaliacao`, state machine, regras de negócio)
+- [x] Casos de uso (submeter, aprovar, rejeitar, listar, obter convite)
+- [x] Persistência real com Row-Level Security (Postgres RLS) ativo
+- [x] API REST (controllers, DTOs, exception filter global)
+- [x] Testes automatizados do backend (unitários — ver seção de limitações para o e2e)
+- [x] Frontend (React) — tela de submissão de avaliação funcional, ponta a ponta contra o backend real; painel de moderação, listagem e detalhe ainda pendentes
+- [ ] Documentação final de decisões arquiteturais consolidada
+
+O backend está funcionalmente completo e testado (unitário + manual ponta a ponta). O frontend tem bootstrap, autenticação real e a tela de submissão de avaliação funcionando (validada manualmente contra o backend real); painel de moderação, listagem de avaliações e tela de detalhe ficaram de fora por corte de escopo em cima do prazo — ver `frontend/RELATORIO_EMERGENCIA.md`.
 
 ## Stack
 
-Backend: NestJS + TypeScript + Prisma + PostgreSQL
-Frontend: React + TypeScript + Vite
-Infra local: Docker Compose
+- **Backend**: NestJS 11 + TypeScript, Prisma ORM 7 (driver adapter `@prisma/adapter-pg`), PostgreSQL 16
+- **Frontend**: React 19 + TypeScript + Vite, TanStack Query, React Hook Form + Zod, Tailwind + shadcn/ui
+- **Infra local**: Docker Compose (só o Postgres — não há mais nada containerizado)
+- **Auth**: JWT RS256, modelo resource-server (esta API não emite token — ver `backend/docs/AUTH_FLOW.md`)
 
-## Como rodar
+## Arquitetura, em uma frase
 
-```powershell
+DDD-flavored, monolito modular por bounded context (`identity`, `avaliacoes`, `investimentos`), com `domain/` → `application/` (commands/queries + handlers, sem `@nestjs/cqrs`) → `infrastructure/` → `presentation/` (controllers/DTOs) em cada módulo. Detalhes e porquês:
+
+- `backend/docs/AUTH_FLOW.md` — por que Bearer token, por que sem `/login`, o que foi testado e como.
+- `backend/docs/DATA_MODEL.md` — schema Prisma, por que snapshot do investimento é congelado na avaliação, por que RLS.
+- `backend/docs/ACHADOS_PENDENTES.md` — 2 lacunas conhecidas e não corrigidas (ver seção "Limitações conhecidas" abaixo).
+
+---
+
+## Pré-requisitos
+
+- Node.js 20+, [pnpm](https://pnpm.io/) instalado (`corepack enable` resolve na maioria dos casos)
+- Docker Desktop rodando
+- OpenSSL disponível no PATH (para gerar o par de chaves JWT de teste — vem por padrão no Git Bash/WSL/Linux/macOS)
+
+## Setup — do zero até rodando
+
+### 1. Suba o Postgres
+
+Na raiz do repositório:
+
+```bash
 docker compose up -d
+```
+
+Confirma que subiu:
+
+```bash
+docker exec -it allu-invest-postgres pg_isready -U postgres
+```
+
+### 2. Instale as dependências do backend
+
+```bash
 cd backend
 pnpm install
+```
+
+### 3. Gere o par de chaves RS256 de teste
+
+Esta API é um *resource server* puro — ela não emite tokens, só verifica. Para desenvolvimento local, simulamos o Identity Provider gerando um par de chaves local:
+
+```bash
+mkdir -p keys
+openssl genrsa -out keys/private.pem 2048
+openssl rsa -in keys/private.pem -pubout -out keys/public.pem
+```
+
+`keys/` já está no `.gitignore` — a chave privada nunca deve ir pro repositório (em produção, ela nem existiria aqui: ficaria no IdP real).
+
+### 4. Configure o `.env`
+
+```bash
+cp .env.example .env
+```
+
+Edite `.env`:
+
+- Cole o conteúdo de `keys/public.pem` (gerado no passo anterior) dentro de `JWT_PUBLIC_KEY`, mantendo as linhas `-----BEGIN PUBLIC KEY-----` / `-----END PUBLIC KEY-----`.
+- Troque o placeholder de senha em `RUNTIME_DATABASE_URL` para `troque-esta-senha-em-producao` — é a senha que a migration de RLS usa para criar o role restrito `allu_invest_app` (veja `prisma/migrations/20260805170000_rls_avaliacoes/migration.sql`). Se preferir outra senha, mude nos dois lugares (`.env` e a migration) antes de rodar o passo 5.
+
+### 5. Rode as migrations
+
+```bash
+pnpm run prisma:generate
+pnpm run prisma:migrate
+```
+
+A primeira migration cria o schema; a segunda (`20260805170000_rls_avaliacoes`) cria um role Postgres restrito (`allu_invest_app`, sem privilégio de superuser — necessário porque superuser ignora RLS) e ativa Row-Level Security nas tabelas `avaliacoes`, `notas_criterio` e `anexos`.
+
+### 6. Suba o backend
+
+```bash
 pnpm run start:dev
 ```
 
-Backend sobe em http://localhost:3000/api
+Sobe em `http://localhost:3000/api`. Log de sucesso esperado: `Nest application successfully started` + a lista de rotas mapeadas.
+
+---
+
+## Testando
+
+### Testes automatizados (unitários)
+
+```bash
+cd backend
+pnpm run build   # confirma que compila
+pnpm run lint    # zero warnings/erros
+pnpm test        # 121 testes, todos unitários (mocks nas portas — sem tocar banco real)
+```
+
+> `pnpm run test:e2e` está quebrado hoje — ver "Limitações conhecidas" abaixo antes de tentar rodá-lo.
+
+### Fluxo manual completo (ponta a ponta, contra o servidor real)
+
+Com o backend rodando (passo 6 acima) e o Postgres em pé, gere tokens de teste:
+
+```bash
+# de dentro de backend/
+npx ts-node -r tsconfig-paths/register src/scripts/gerar-token-teste.ts cliente cliente-teste-001
+npx ts-node -r tsconfig-paths/register src/scripts/gerar-token-teste.ts cliente cliente-teste-002
+npx ts-node -r tsconfig-paths/register src/scripts/gerar-token-teste.ts moderador moderador-teste-001
+```
+
+Não existe seed de investimentos "de verdade" — o contexto `investimentos` é simulado por um gateway com 3 fixtures fixas (`MockInvestimentoGatewayAdapter`), pensadas pra cobrir os cenários abaixo:
+
+| `investimentoId` | dono (`clienteId`) | produto |
+|---|---|---|
+| `investimento-001` | `cliente-teste-001` | CDB Pós-fixado |
+| `investimento-002` | `cliente-teste-002` | LCI |
+| `investimento-003` | `cliente-teste-001` | Tesouro Selic |
+
+Salve os 3 tokens em variáveis e siga o fluxo:
+
+```bash
+TOKEN_A="<token do cliente-teste-001>"
+TOKEN_B="<token do cliente-teste-002>"
+TOKEN_MOD="<token do moderador>"
+
+# 1. Ver o convite (dados do investimento antes de avaliar)
+curl http://localhost:3000/api/avaliacoes/convite/investimento-001 \
+  -H "Authorization: Bearer $TOKEN_A"
+
+# 2. Submeter avaliação (com 1 anexo PDF opcional)
+curl -X POST http://localhost:3000/api/avaliacoes \
+  -H "Authorization: Bearer $TOKEN_A" \
+  -F "investimentoId=investimento-001" \
+  -F "notas[0][criterio]=ATENDIMENTO" \
+  -F "notas[0][valor]=5" \
+  -F "comentario=Otima experiencia" \
+  -F "versaoPolitica=v1"
+# guarde o "id" retornado
+
+# 3. Ver a própria avaliação
+curl http://localhost:3000/api/avaliacoes/<id> -H "Authorization: Bearer $TOKEN_A"
+
+# 4. Cliente B tentando ver a avaliação de A -> 404 (nunca 403, anti-enumeração deliberada)
+curl -i http://localhost:3000/api/avaliacoes/<id> -H "Authorization: Bearer $TOKEN_B"
+
+# 5. Cliente tentando acessar rota de moderador -> 403 (RBAC de papel, diferente do 404 acima)
+curl -i http://localhost:3000/api/moderacao/pendentes -H "Authorization: Bearer $TOKEN_A"
+
+# 6. Moderador aprova
+curl -X POST http://localhost:3000/api/moderacao/<id>/aprovar -H "Authorization: Bearer $TOKEN_MOD"
+
+# 7. Fluxo de rejeição (outra avaliação, outro investimento)
+curl -X POST http://localhost:3000/api/avaliacoes \
+  -H "Authorization: Bearer $TOKEN_A" \
+  -F "investimentoId=investimento-003" \
+  -F "notas[0][criterio]=RENTABILIDADE_PERCEBIDA" \
+  -F "notas[0][valor]=2" \
+  -F "versaoPolitica=v1"
+curl -X POST http://localhost:3000/api/moderacao/<id-da-nova>/rejeitar \
+  -H "Authorization: Bearer $TOKEN_MOD" -H "Content-Type: application/json" \
+  -d '{"motivo": "Comentario nao condiz com a nota"}'
+```
+
+Critérios válidos para `notas[].criterio`: `ATENDIMENTO`, `CLAREZA_INFORMACOES`, `FACILIDADE_RESGATE`, `RENTABILIDADE_PERCEBIDA`, `RECOMENDARIA_A_OUTROS` (nota inteira de 1 a 5). Anexos: até 3 arquivos, 5MB cada, PDF/JPEG/PNG validados por conteúdo real do arquivo (magic number), não por extensão.
+
+### Rotas disponíveis
+
+Todas sob o prefixo `/api`. Autenticação via `Authorization: Bearer <token>` em todas exceto onde indicado.
+
+| Método | Rota | Quem | O que faz |
+|---|---|---|---|
+| GET | `/me` | qualquer autenticado | dados do usuário autenticado |
+| POST | `/avaliacoes` | cliente | submete avaliação (multipart, anexos opcionais) |
+| GET | `/avaliacoes` | cliente | lista as próprias avaliações (paginado, `?pagina=&tamanhoPagina=`, máx. 50) |
+| GET | `/avaliacoes/convite/:investimentoId` | cliente | dados do investimento + avaliação existente (se houver) |
+| GET | `/avaliacoes/:id` | cliente (dono) | detalhe de uma avaliação — 404 se não existe ou não é sua |
+| GET | `/moderacao/pendentes` | moderador | fila de avaliações aguardando moderação (paginado) |
+| POST | `/moderacao/:id/aprovar` | moderador | aprova |
+| POST | `/moderacao/:id/rejeitar` | moderador | rejeita (`{"motivo": "..."}` obrigatório) |
+
+## Frontend
+
+O frontend vive em `frontend/`, já mesclado em `main`. Estado atual: bootstrap completo (Vite, Tailwind, shadcn/ui, TanStack Query, roteamento), autenticação real contra `GET /api/me` (tela de login cola o token gerado pelo script acima), e a tela de submissão de avaliação (`/investimentos/:investimentoId/avaliar`) funcional — informações do investimento, notas por critério, comentário, upload de anexo e aceite de política, submetendo via `POST /avaliacoes` e mostrando o status quando já existe avaliação para aquele investimento.
+
+Painel de moderação, listagem de "minhas avaliações" e tela de detalhe não foram implementados — corte de escopo em cima do prazo, detalhado em `frontend/RELATORIO_EMERGENCIA.md`.
+
+Para rodar:
+
+```bash
+cd frontend
+cp .env.example .env   # já aponta pra http://localhost:3000/api
+pnpm install
+pnpm run dev
+```
+
+Abre em `http://localhost:5173`. Precisa do backend rodando (seção anterior).
+
+## Limitações conhecidas
+
+Registradas aqui por transparência — nenhuma delas é acidental/despercebida, todas foram encontradas e documentadas durante revisão crítica, e a decisão de não corrigir agora foi deliberada (mexem em código já commitado, exigem decisão de desenho):
+
+1. **Motivo de rejeição não é persistido.** `POST /moderacao/:id/rejeitar` aceita e valida o motivo, mas ele só existe dentro de um evento de domínio efêmero (sem listener) — não aparece em nenhum `GET` posterior. Corrigir exige nova coluna + migration.
+2. **Aprovação/rejeição concorrente não tem lock otimista.** Duas requisições simultâneas de moderação sobre a mesma avaliação não geram erro — a segunda simplesmente sobrescreve a primeira (last-write-wins), incluindo dois eventos de domínio publicados para uma ação que deveria ser única. Confirmado empiricamente (não é suposição). Diferente da submissão de avaliação, que É protegida por constraint `@unique` no banco.
+3. **`pnpm run test:e2e` está quebrado** — `test/jest-e2e.json` não tem os path aliases (`@shared/*`, `@modules/*`) configurados, então a suíte falha na importação antes mesmo de rodar qualquer teste. Pré-existente ao trabalho recente, nunca coberto pelos módulos implementados até aqui. O e2e-spec padrão do Nest (`GET /` → "Hello World!") também está desatualizado — não existe mais rota raiz nessa API.
+
+Detalhes técnicos completos dos itens 1 e 2 em `backend/docs/ACHADOS_PENDENTES.md`.
 
 ## Autor
 
