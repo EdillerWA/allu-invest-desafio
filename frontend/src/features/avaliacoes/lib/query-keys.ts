@@ -7,5 +7,6 @@ export const avaliacoesKeys = {
   minhas: (pagina: number, tamanhoPagina: number, status?: StatusAvaliacao, q?: string) =>
     [...avaliacoesKeys.all, 'minhas', pagina, tamanhoPagina, status ?? null, q ?? ''] as const,
   detalhe: (id: string) => [...avaliacoesKeys.all, 'detalhe', id] as const,
-  convites: () => [...avaliacoesKeys.all, 'convites'] as const,
+  convites: (pagina: number, tamanhoPagina: number, status?: string, q?: string) =>
+    [...avaliacoesKeys.all, 'convites', pagina, tamanhoPagina, status ?? '', q ?? ''] as const,
 }

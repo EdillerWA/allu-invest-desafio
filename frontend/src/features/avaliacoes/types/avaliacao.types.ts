@@ -57,3 +57,15 @@ export interface ConviteResumo {
   avaliacaoId: string | null
   statusAvaliacao: StatusAvaliacao | null
 }
+
+export interface ResumoConvites {
+  totalInvestimentos: number
+  aguardandoAvaliacao: number
+  valorTotalAplicado: number
+}
+
+export interface ConvitesPaginados {
+  itens: ConviteResumo[]
+  total: number
+  resumo: ResumoConvites
+}

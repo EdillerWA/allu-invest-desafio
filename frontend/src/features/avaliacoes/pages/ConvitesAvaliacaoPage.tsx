@@ -6,11 +6,13 @@ import { Button } from '@/shared/ui/button'
 import { KpiCard } from '@/shared/components/KpiCard'
 import { SearchInput } from '@/shared/components/SearchInput'
 import { FiltroChips } from '@/shared/components/FiltroChips'
+import { PaginacaoControls } from '@/shared/components/PaginacaoControls'
+import { useDebouncedValue } from '@/shared/hooks/use-debounced-value'
 import { STATUS_AVALIACAO_METADATA, type StatusAvaliacao } from '@/shared/types/avaliacao-status'
 import { getErrorMessage } from '@/shared/types/api-error'
 import { useConvitesAvaliacao } from '../hooks/use-convites-avaliacao'
-import type { ConviteResumo } from '../types/avaliacao.types'
 
+const TAMANHO_PAGINA = 6
 const FILTRO_TODAS = 'TODAS' as const
 const FILTRO_AGUARDANDO = 'AGUARDANDO' as const
 type FiltroStatus = typeof FILTRO_TODAS | typeof FILTRO_AGUARDANDO | StatusAvaliacao
@@ -24,38 +26,32 @@ const OPCOES_STATUS: { value: FiltroStatus; label: string }[] = [
   { value: 'REJEITADA', label: STATUS_AVALIACAO_METADATA.REJEITADA.label },
 ]
 
-function aplicarFiltro(
-  convites: ConviteResumo[],
-  status: FiltroStatus,
-  busca: string,
-): ConviteResumo[] {
-  const buscaNormalizada = busca.trim().toLowerCase()
-
-  return convites.filter((convite) => {
-    const combinaStatus =
-      status === FILTRO_TODAS ||
-      (status === FILTRO_AGUARDANDO ? !convite.avaliacaoId : convite.statusAvaliacao === status)
-    const combinaBusca =
-      buscaNormalizada.length === 0 ||
-      convite.tipoProduto.toLowerCase().includes(buscaNormalizada)
-
-    return combinaStatus && combinaBusca
-  })
-}
-
 export function ConvitesAvaliacaoPage() {
-  const { data, isPending, isError, error } = useConvitesAvaliacao()
+  const [pagina, setPagina] = useState(1)
   const [status, setStatus] = useState<FiltroStatus>(FILTRO_TODAS)
   const [busca, setBusca] = useState('')
+  const buscaDebounced = useDebouncedValue(busca, 300)
 
-  const pendentes = data?.filter((convite) => !convite.avaliacaoId).length ?? 0
-  const valorTotal =
-    data?.reduce((soma, convite) => soma + convite.valorAplicado, 0).toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }) ?? 'R$ 0,00'
+  const { data, isPending, isError, error } = useConvitesAvaliacao(pagina, TAMANHO_PAGINA, {
+    status: status === FILTRO_TODAS ? undefined : status,
+    q: buscaDebounced.trim() || undefined,
+  })
 
-  const convitesFiltrados = data ? aplicarFiltro(data, status, busca) : []
+  function handleStatusChange(novoStatus: FiltroStatus) {
+    setStatus(novoStatus)
+    setPagina(1)
+  }
+
+  function handleBuscaChange(novaBusca: string) {
+    setBusca(novaBusca)
+    setPagina(1)
+  }
+
+  const filtroAtivo = status !== FILTRO_TODAS || buscaDebounced.trim().length > 0
+  const valorTotal = (data?.resumo.valorTotalAplicado ?? 0).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  })
 
   return (
     <div className="flex w-full flex-col gap-6 p-6 py-10 md:p-8">
@@ -66,18 +62,26 @@ export function ConvitesAvaliacaoPage() {
         </p>
       </div>
 
-      {!isPending && !isError && data.length > 0 && (
+      {!isPending && !isError && data.resumo.totalInvestimentos > 0 && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <KpiCard label="Investimentos encerrados" value={String(data.length)} icon={Landmark} />
-          <KpiCard label="Aguardando avaliação" value={String(pendentes)} icon={ClipboardList} />
+          <KpiCard
+            label="Investimentos encerrados"
+            value={String(data.resumo.totalInvestimentos)}
+            icon={Landmark}
+          />
+          <KpiCard
+            label="Aguardando avaliação"
+            value={String(data.resumo.aguardandoAvaliacao)}
+            icon={ClipboardList}
+          />
           <KpiCard label="Valor total aplicado" value={valorTotal} icon={Wallet} />
         </div>
       )}
 
-      {!isPending && !isError && data.length > 0 && (
+      {!isPending && !isError && (data.resumo.totalInvestimentos > 0 || filtroAtivo) && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <FiltroChips opcoes={OPCOES_STATUS} valorSelecionado={status} onSelecionar={setStatus} />
-          <SearchInput value={busca} onChange={setBusca} placeholder="Buscar por produto..." />
+          <FiltroChips opcoes={OPCOES_STATUS} valorSelecionado={status} onSelecionar={handleStatusChange} />
+          <SearchInput value={busca} onChange={handleBuscaChange} placeholder="Buscar por produto..." />
         </div>
       )}
 
@@ -95,63 +99,67 @@ export function ConvitesAvaliacaoPage() {
           <AlertCircle className="size-8 text-destructive" aria-hidden="true" />
           {getErrorMessage(error, 'Não foi possível carregar seus investimentos.')}
         </div>
-      ) : data.length === 0 ? (
+      ) : data.itens.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed py-16 text-center">
           <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
-            <ClipboardList className="size-5" aria-hidden="true" />
+            {filtroAtivo ? (
+              <SearchX className="size-5" aria-hidden="true" />
+            ) : (
+              <ClipboardList className="size-5" aria-hidden="true" />
+            )}
           </span>
           <div className="space-y-1">
-            <p className="font-medium text-foreground">Nenhum investimento encerrado ainda</p>
-            <p className="max-w-xs text-sm text-muted-foreground">
-              Quando um dos seus investimentos for encerrado, ele aparece aqui para você avaliar.
+            <p className="font-medium text-foreground">
+              {filtroAtivo ? 'Nenhum investimento encontrado' : 'Nenhum investimento encerrado ainda'}
             </p>
-          </div>
-        </div>
-      ) : convitesFiltrados.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed py-16 text-center">
-          <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
-            <SearchX className="size-5" aria-hidden="true" />
-          </span>
-          <div className="space-y-1">
-            <p className="font-medium text-foreground">Nenhum investimento encontrado</p>
             <p className="max-w-xs text-sm text-muted-foreground">
-              Ajuste a busca ou o filtro de status para ver outros resultados.
+              {filtroAtivo
+                ? 'Ajuste a busca ou o filtro de status para ver outros resultados.'
+                : 'Quando um dos seus investimentos for encerrado, ele aparece aqui para você avaliar.'}
             </p>
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {convitesFiltrados.map((convite) => (
-            <Card key={convite.investimentoId} className="gap-3 p-4 shadow-sm">
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <CardHeader className="p-0">
-                    <CardTitle className="text-base">{convite.tipoProduto}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0 pt-1 text-sm text-muted-foreground">
-                    {convite.valorAplicado.toLocaleString('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL',
-                    })}
-                  </CardContent>
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {data.itens.map((convite) => (
+              <Card key={convite.investimentoId} className="gap-3 p-4 shadow-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <CardHeader className="p-0">
+                      <CardTitle className="text-base">{convite.tipoProduto}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0 pt-1 text-sm text-muted-foreground">
+                      {convite.valorAplicado.toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL',
+                      })}
+                    </CardContent>
+                  </div>
+                  {convite.avaliacaoId && convite.statusAvaliacao ? (
+                    <StatusBadge status={convite.statusAvaliacao} />
+                  ) : null}
                 </div>
-                {convite.avaliacaoId && convite.statusAvaliacao ? (
-                  <StatusBadge status={convite.statusAvaliacao} />
-                ) : null}
-              </div>
 
-              {convite.avaliacaoId ? (
-                <Button variant="outline" size="sm" asChild>
-                  <Link to={`/avaliacoes/${convite.avaliacaoId}`}>Ver avaliação</Link>
-                </Button>
-              ) : (
-                <Button size="sm" asChild>
-                  <Link to={`/investimentos/${convite.investimentoId}/avaliar`}>Avaliar agora</Link>
-                </Button>
-              )}
-            </Card>
-          ))}
-        </div>
+                {convite.avaliacaoId ? (
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to={`/avaliacoes/${convite.avaliacaoId}`}>Ver avaliação</Link>
+                  </Button>
+                ) : (
+                  <Button size="sm" asChild>
+                    <Link to={`/investimentos/${convite.investimentoId}/avaliar`}>Avaliar agora</Link>
+                  </Button>
+                )}
+              </Card>
+            ))}
+          </div>
+          <PaginacaoControls
+            pagina={pagina}
+            total={data.total}
+            tamanhoPagina={TAMANHO_PAGINA}
+            onPaginaChange={setPagina}
+          />
+        </>
       )}
     </div>
   )

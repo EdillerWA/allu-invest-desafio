@@ -14,6 +14,20 @@ export interface ConviteResumo {
   statusAvaliacao: string | null;
 }
 
+export interface ResumoConvites {
+  totalInvestimentos: number;
+  aguardandoAvaliacao: number;
+  valorTotalAplicado: number;
+}
+
+export interface ConvitesPaginados {
+  itens: ConviteResumo[];
+  total: number;
+  resumo: ResumoConvites;
+}
+
+const STATUS_AGUARDANDO = 'AGUARDANDO';
+
 // Generaliza ObterInvestimentoParaAvaliacaoHandler (um investimentoId) para
 // "todos os investimentos encerrados deste cliente" — e o que fecha a
 // lacuna real do cenario do desafio: sem isso, o cliente nao tem nenhuma
@@ -28,13 +42,13 @@ export class ListarConvitesAvaliacaoHandler {
 
   async executar(
     query: ListarConvitesAvaliacaoQuery,
-  ): Promise<ConviteResumo[]> {
+  ): Promise<ConvitesPaginados> {
     const investimentos =
       await this.investimentoGateway.listarEncerradosPorCliente(
         query.clienteId,
       );
 
-    return Promise.all(
+    const todosOsConvites: ConviteResumo[] = await Promise.all(
       investimentos.map(async (investimento) => {
         const avaliacao = await this.repository.buscarPorInvestimentoId(
           investimento.investimentoId,
@@ -52,5 +66,39 @@ export class ListarConvitesAvaliacaoHandler {
         };
       }),
     );
+
+    // O resumo/KPI e sempre sobre o conjunto completo do cliente, nao sobre
+    // a pagina ou o filtro aplicado — senao "5 investimentos encerrados"
+    // mudaria de valor so por trocar de pagina, o que confundiria mais do
+    // que ajudaria.
+    const resumo: ResumoConvites = {
+      totalInvestimentos: todosOsConvites.length,
+      aguardandoAvaliacao: todosOsConvites.filter(
+        (convite) => convite.avaliacaoId === null,
+      ).length,
+      valorTotalAplicado: todosOsConvites.reduce(
+        (soma, convite) => soma + convite.valorAplicado,
+        0,
+      ),
+    };
+
+    const buscaNormalizada = query.q?.trim().toLowerCase();
+    const filtrados = todosOsConvites.filter((convite) => {
+      const combinaStatus =
+        !query.status ||
+        (query.status === STATUS_AGUARDANDO
+          ? convite.avaliacaoId === null
+          : convite.statusAvaliacao === query.status);
+      const combinaBusca =
+        !buscaNormalizada ||
+        convite.tipoProduto.toLowerCase().includes(buscaNormalizada);
+
+      return combinaStatus && combinaBusca;
+    });
+
+    const inicio = (query.pagina - 1) * query.tamanhoPagina;
+    const itens = filtrados.slice(inicio, inicio + query.tamanhoPagina);
+
+    return { itens, total: filtrados.length, resumo };
   }
 }

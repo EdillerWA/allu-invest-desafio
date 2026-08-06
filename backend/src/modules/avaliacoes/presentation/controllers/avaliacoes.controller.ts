@@ -33,6 +33,7 @@ import { ObterAnexoParaDownloadHandler } from '../../application/queries/obter-a
 import { ObterAnexoParaDownloadQuery } from '../../application/queries/obter-anexo-para-download/obter-anexo-para-download.query';
 import { SubmeterAvaliacaoDto } from '../dtos/submeter-avaliacao.dto';
 import { ListarMinhasAvaliacoesQueryDto } from '../dtos/listar-minhas-avaliacoes-query.dto';
+import { ListarConvitesQueryDto } from '../dtos/listar-convites-query.dto';
 import { paraResposta } from '../dtos/avaliacao-resposta.mapper';
 import {
   MAXIMO_DE_ANEXOS_POR_REQUISICAO,
@@ -114,9 +115,18 @@ export class AvaliacoesController {
   }
 
   @Get('convites')
-  async listarConvites(@CurrentUser() usuario: AuthenticatedUser) {
+  async listarConvites(
+    @CurrentUser() usuario: AuthenticatedUser,
+    @Query() paginacao: ListarConvitesQueryDto,
+  ) {
     return this.listarConvitesHandler.executar(
-      new ListarConvitesAvaliacaoQuery(usuario.id),
+      new ListarConvitesAvaliacaoQuery(
+        usuario.id,
+        paginacao.pagina ?? 1,
+        paginacao.tamanhoPagina ?? 10,
+        paginacao.status,
+        paginacao.q,
+      ),
     );
   }
 

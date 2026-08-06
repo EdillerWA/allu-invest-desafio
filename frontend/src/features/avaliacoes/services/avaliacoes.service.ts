@@ -3,7 +3,7 @@ import type { StatusAvaliacao } from '@/shared/types/avaliacao-status'
 import type {
   AvaliacaoResposta,
   ConviteAvaliacaoResposta,
-  ConviteResumo,
+  ConvitesPaginados,
   NotaInput,
 } from '../types/avaliacao.types'
 
@@ -12,8 +12,19 @@ export async function obterConvite(investimentoId: string): Promise<ConviteAvali
   return data
 }
 
-export async function listarConvites(): Promise<ConviteResumo[]> {
-  const { data } = await http.get<ConviteResumo[]>('/avaliacoes/convites')
+interface ListarConvitesFiltro {
+  status?: string
+  q?: string
+}
+
+export async function listarConvites(
+  pagina: number,
+  tamanhoPagina: number,
+  filtro?: ListarConvitesFiltro,
+): Promise<ConvitesPaginados> {
+  const { data } = await http.get<ConvitesPaginados>('/avaliacoes/convites', {
+    params: { pagina, tamanhoPagina, status: filtro?.status, q: filtro?.q },
+  })
   return data
 }
 
