@@ -1,13 +1,17 @@
+import { randomUUID } from 'crypto';
 import { TamanhoDeAnexoInvalidoError } from '../errors/avaliacao.errors';
 
 const TAMANHO_MAXIMO_BYTES = 5 * 1024 * 1024;
 
 interface PropsAnexo {
+  readonly id: string;
   readonly nomeOriginal: string;
   readonly caminhoArmazenamento: string;
   readonly tipoMime: string;
   readonly tamanhoBytes: number;
 }
+
+type NovoAnexoProps = Omit<PropsAnexo, 'id'>;
 
 // VO em vez de interface simples: tamanhoBytes carrega uma invariante de
 // negocio real (um anexo nao pode, por definicao, exceder 5MB) — mesmo
@@ -22,7 +26,7 @@ export class Anexo {
     this.props = { ...props };
   }
 
-  static criar(props: PropsAnexo): Anexo {
+  static criar(props: NovoAnexoProps): Anexo {
     if (
       !Number.isInteger(props.tamanhoBytes) ||
       props.tamanhoBytes <= 0 ||
@@ -30,11 +34,15 @@ export class Anexo {
     ) {
       throw new TamanhoDeAnexoInvalidoError(props.tamanhoBytes);
     }
-    return new Anexo(props);
+    return new Anexo({ id: randomUUID(), ...props });
   }
 
   static reconstituir(props: PropsAnexo): Anexo {
     return new Anexo(props);
+  }
+
+  obterId(): string {
+    return this.props.id;
   }
 
   obterNomeOriginal(): string {

@@ -43,6 +43,13 @@ export async function obterPorId(id: string): Promise<AvaliacaoResposta> {
   return data
 }
 
+export async function baixarAnexo(avaliacaoId: string, anexoId: string): Promise<Blob> {
+  const { data } = await http.get<Blob>(`/avaliacoes/${avaliacaoId}/anexos/${anexoId}/download`, {
+    responseType: 'blob',
+  })
+  return data
+}
+
 interface CriarAvaliacaoInput {
   investimentoId: string
   notas: NotaInput[]

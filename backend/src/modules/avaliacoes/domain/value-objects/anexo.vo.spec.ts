@@ -18,6 +18,15 @@ describe('Anexo', () => {
       expect(anexo.obterTamanhoBytes()).toBe(1024);
     });
 
+    it('gera um id proprio, diferente a cada anexo criado', () => {
+      const anexo1 = Anexo.criar(propsValidas(1024));
+      const anexo2 = Anexo.criar(propsValidas(1024));
+
+      expect(typeof anexo1.obterId()).toBe('string');
+      expect(anexo1.obterId().length).toBeGreaterThan(0);
+      expect(anexo1.obterId()).not.toBe(anexo2.obterId());
+    });
+
     it('aceita exatamente o limite maximo de 5MB', () => {
       const anexo = Anexo.criar(propsValidas(5 * 1024 * 1024));
 

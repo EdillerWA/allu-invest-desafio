@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
-import { mkdir, writeFile } from 'fs/promises';
+import { mkdir, readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 import {
   ArquivoParaSalvar,
@@ -33,5 +33,14 @@ export class LocalFileStorageAdapter implements ArquivoStoragePort {
       caminhoArmazenamento: caminhoCompleto,
       tamanhoBytes: arquivo.buffer.length,
     };
+  }
+
+  // caminhoArmazenamento aqui e sempre um valor que nos mesmos geramos e
+  // persistimos em salvar() acima, nunca algo vindo direto de input de
+  // usuario — quem chama isso (ver ObterAnexoParaDownloadHandler) resolve o
+  // anexo pelo id via banco antes, entao nao ha traversal de path exposto
+  // por essa funcao.
+  async ler(caminhoArmazenamento: string): Promise<Buffer> {
+    return readFile(caminhoArmazenamento);
   }
 }

@@ -57,6 +57,7 @@ interface LinhaComRelacoes {
   idempotencyKey: string | null;
   notas: { criterio: CriterioPersistido; nota: number }[];
   anexos: {
+    id: string;
     nomeOriginal: string;
     caminhoArmazenamento: string;
     tipoMime: string;

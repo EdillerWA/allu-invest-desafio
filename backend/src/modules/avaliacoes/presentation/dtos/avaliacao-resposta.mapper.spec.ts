@@ -41,8 +41,12 @@ describe('avaliacao-resposta.mapper', () => {
     expect(resposta.notas).toEqual([
       { criterio: TipoCriterio.ATENDIMENTO, valor: 5 },
     ]);
+    const [primeiroAnexo] = resposta.anexos;
+    expect(typeof primeiroAnexo.id).toBe('string');
+    expect(primeiroAnexo.id.length).toBeGreaterThan(0);
     expect(resposta.anexos).toEqual([
       {
+        id: primeiroAnexo.id,
         nomeOriginal: 'comprovante.pdf',
         tipoMime: 'application/pdf',
         tamanhoBytes: 2048,

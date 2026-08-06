@@ -14,6 +14,7 @@ export interface NotaPersistida {
 }
 
 export interface AnexoPersistido {
+  id: string;
   nomeOriginal: string;
   caminhoArmazenamento: string;
   tipoMime: string;
@@ -145,6 +146,7 @@ export function paraPersistenciaCreate(
     },
     anexos: {
       create: avaliacao.anexos.map((anexo) => ({
+        id: anexo.obterId(),
         nomeOriginal: anexo.obterNomeOriginal(),
         caminhoArmazenamento: anexo.obterCaminhoArmazenamento(),
         tipoMime: anexo.obterTipoMime(),

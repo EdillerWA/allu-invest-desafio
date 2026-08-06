@@ -7,6 +7,7 @@ import { STATUS_AVALIACAO_METADATA } from '@/shared/types/avaliacao-status'
 import { CRITERIOS_AVALIACAO } from '@/shared/types/criterio-avaliacao'
 import { getErrorMessage } from '@/shared/types/api-error'
 import { useAvaliacaoDetalhe } from '../hooks/use-avaliacao-detalhe'
+import { AnexoDownloadButton } from '../components/AnexoDownloadButton'
 
 export function DetalheAvaliacaoPage() {
   const { id } = useParams<{ id: string }>()
@@ -115,9 +116,11 @@ export function DetalheAvaliacaoPage() {
               <CardTitle>Anexos</CardTitle>
             </CardHeader>
             <CardContent>
-              <ul className="text-sm text-muted-foreground">
+              <ul className="flex flex-col gap-1">
                 {avaliacao.anexos.map((anexo) => (
-                  <li key={anexo.nomeOriginal}>{anexo.nomeOriginal}</li>
+                  <li key={anexo.id}>
+                    <AnexoDownloadButton avaliacaoId={avaliacao.id} anexo={anexo} />
+                  </li>
                 ))}
               </ul>
             </CardContent>

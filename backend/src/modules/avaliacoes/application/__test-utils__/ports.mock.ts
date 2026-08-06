@@ -69,5 +69,6 @@ export function criarInvestimentoGatewayMock() {
 export function criarArquivoStorageMock() {
   return {
     salvar: jest.fn<Promise<ArquivoSalvo>, [ArquivoParaSalvar]>(),
+    ler: jest.fn<Promise<Buffer>, [string]>(),
   };
 }

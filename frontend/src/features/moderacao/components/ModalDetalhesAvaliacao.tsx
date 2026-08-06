@@ -10,6 +10,7 @@ import {
 import { Button } from '@/shared/ui/button'
 import { STATUS_AVALIACAO_METADATA } from '@/shared/types/avaliacao-status'
 import { CRITERIOS_AVALIACAO } from '@/shared/types/criterio-avaliacao'
+import { AnexoDownloadButton } from '@/features/avaliacoes/components/AnexoDownloadButton'
 import { useAprovarAvaliacao } from '../hooks/use-aprovar-avaliacao'
 import type { AvaliacaoModeracao } from '../types/moderacao.types'
 
@@ -72,9 +73,11 @@ export function ModalDetalhesAvaliacao({
           {avaliacao.anexos.length > 0 && (
             <div className="space-y-1">
               <p className="font-medium text-foreground">Anexos</p>
-              <ul className="text-muted-foreground">
+              <ul className="flex flex-col gap-1">
                 {avaliacao.anexos.map((anexo) => (
-                  <li key={anexo.nomeOriginal}>{anexo.nomeOriginal}</li>
+                  <li key={anexo.id}>
+                    <AnexoDownloadButton avaliacaoId={avaliacao.id} anexo={anexo} />
+                  </li>
                 ))}
               </ul>
             </div>

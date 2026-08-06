@@ -8,9 +8,12 @@ import {
   ParseFilePipe,
   Post,
   Query,
+  Res,
+  StreamableFile,
   UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '@modules/identity/decorators/current-user.decorator';
 import { Roles } from '@modules/identity/decorators/roles.decorator';
@@ -26,6 +29,8 @@ import { ObterInvestimentoParaAvaliacaoHandler } from '../../application/queries
 import { ObterInvestimentoParaAvaliacaoQuery } from '../../application/queries/obter-investimento-para-avaliacao/obter-investimento-para-avaliacao.query';
 import { ListarConvitesAvaliacaoHandler } from '../../application/queries/listar-convites-avaliacao/listar-convites-avaliacao.handler';
 import { ListarConvitesAvaliacaoQuery } from '../../application/queries/listar-convites-avaliacao/listar-convites-avaliacao.query';
+import { ObterAnexoParaDownloadHandler } from '../../application/queries/obter-anexo-para-download/obter-anexo-para-download.handler';
+import { ObterAnexoParaDownloadQuery } from '../../application/queries/obter-anexo-para-download/obter-anexo-para-download.query';
 import { SubmeterAvaliacaoDto } from '../dtos/submeter-avaliacao.dto';
 import { ListarMinhasAvaliacoesQueryDto } from '../dtos/listar-minhas-avaliacoes-query.dto';
 import { paraResposta } from '../dtos/avaliacao-resposta.mapper';
@@ -46,6 +51,7 @@ export class AvaliacoesController {
     private readonly listarMinhasHandler: ListarMinhasAvaliacoesHandler,
     private readonly obterInvestimentoParaAvaliacaoHandler: ObterInvestimentoParaAvaliacaoHandler,
     private readonly listarConvitesHandler: ListarConvitesAvaliacaoHandler,
+    private readonly obterAnexoParaDownloadHandler: ObterAnexoParaDownloadHandler,
   ) {}
 
   @Post()
@@ -141,5 +147,30 @@ export class AvaliacoesController {
       new ObterAvaliacaoQuery(id, usuario),
     );
     return paraResposta(avaliacao);
+  }
+
+  // Sobrescreve o @Roles(CLIENTE) da classe: moderador tambem precisa poder
+  // baixar anexo de uma avaliacao pendente pra decidir aprovar/rejeitar com
+  // informacao completa, nao so o cliente dono. A checagem de posse real
+  // (dono OU moderador, 404 anti-enumeracao) continua no handler.
+  @Get(':id/anexos/:anexoId/download')
+  @Roles(RoleUsuario.CLIENTE, RoleUsuario.MODERADOR)
+  async baixarAnexo(
+    @Param('id') id: string,
+    @Param('anexoId') anexoId: string,
+    @CurrentUser() usuario: AuthenticatedUser,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const anexo = await this.obterAnexoParaDownloadHandler.executar(
+      new ObterAnexoParaDownloadQuery(id, anexoId, usuario),
+    );
+
+    const nomeCodificado = encodeURIComponent(anexo.nomeOriginal);
+    res.set({
+      'Content-Type': anexo.tipoMime,
+      'Content-Disposition': `attachment; filename="${nomeCodificado}"; filename*=UTF-8''${nomeCodificado}`,
+    });
+
+    return new StreamableFile(anexo.conteudo);
   }
 }

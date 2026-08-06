@@ -11,7 +11,12 @@ export interface AvaliacaoResposta {
   comentario: string | null;
   motivoRejeicao: string | null;
   notas: { criterio: TipoCriterio; valor: number }[];
-  anexos: { nomeOriginal: string; tipoMime: string; tamanhoBytes: number }[];
+  anexos: {
+    id: string;
+    nomeOriginal: string;
+    tipoMime: string;
+    tamanhoBytes: number;
+  }[];
   aceitePolitica: { versao: string; dataAceite: Date } | null;
   investimento: {
     tipoProduto: string;
@@ -41,6 +46,7 @@ export function paraResposta(avaliacao: Avaliacao): AvaliacaoResposta {
       valor: nota.obterValor(),
     })),
     anexos: avaliacao.anexos.map((anexo) => ({
+      id: anexo.obterId(),
       nomeOriginal: anexo.obterNomeOriginal(),
       tipoMime: anexo.obterTipoMime(),
       tamanhoBytes: anexo.obterTamanhoBytes(),

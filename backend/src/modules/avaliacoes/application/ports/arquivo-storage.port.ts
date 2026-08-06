@@ -11,4 +11,5 @@ export interface ArquivoSalvo {
 
 export abstract class ArquivoStoragePort {
   abstract salvar(arquivo: ArquivoParaSalvar): Promise<ArquivoSalvo>;
+  abstract ler(caminhoArmazenamento: string): Promise<Buffer>;
 }

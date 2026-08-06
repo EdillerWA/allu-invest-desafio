@@ -18,6 +18,7 @@ import { ListarPendentesModeracaoHandler } from './application/queries/listar-pe
 import { ListarAvaliacoesPublicasHandler } from './application/queries/listar-avaliacoes-publicas/listar-avaliacoes-publicas.handler';
 import { ObterInvestimentoParaAvaliacaoHandler } from './application/queries/obter-investimento-para-avaliacao/obter-investimento-para-avaliacao.handler';
 import { ListarConvitesAvaliacaoHandler } from './application/queries/listar-convites-avaliacao/listar-convites-avaliacao.handler';
+import { ObterAnexoParaDownloadHandler } from './application/queries/obter-anexo-para-download/obter-anexo-para-download.handler';
 import { AvaliacoesController } from './presentation/controllers/avaliacoes.controller';
 import { ModeracaoController } from './presentation/controllers/moderacao.controller';
 
@@ -41,6 +42,7 @@ import { ModeracaoController } from './presentation/controllers/moderacao.contro
     ListarAvaliacoesPublicasHandler,
     ObterInvestimentoParaAvaliacaoHandler,
     ListarConvitesAvaliacaoHandler,
+    ObterAnexoParaDownloadHandler,
   ],
 })
 export class AvaliacoesModule {}

@@ -41,6 +41,7 @@ function criarRegistroPersistido(
     ],
     anexos: [
       {
+        id: 'anexo-1',
         nomeOriginal: 'comprovante.pdf',
         caminhoArmazenamento: '/anexos/comprovante.pdf',
         tipoMime: 'application/pdf',
@@ -145,8 +146,12 @@ describe('avaliacao.mapper', () => {
       expect(dados.notas.create).toEqual([
         { criterio: TipoCriterio.ATENDIMENTO, nota: 5 },
       ]);
+      const [primeiroAnexo] = dados.anexos.create;
+      expect(typeof primeiroAnexo.id).toBe('string');
+      expect(primeiroAnexo.id.length).toBeGreaterThan(0);
       expect(dados.anexos.create).toEqual([
         {
+          id: primeiroAnexo.id,
           nomeOriginal: 'comprovante.pdf',
           caminhoArmazenamento: '/anexos/comprovante.pdf',
           tipoMime: 'application/pdf',

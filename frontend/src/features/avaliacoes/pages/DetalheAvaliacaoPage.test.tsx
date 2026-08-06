@@ -15,7 +15,9 @@ const AVALIACAO_REJEITADA = {
   comentario: 'Gostei bastante',
   motivoRejeicao: 'Nota nao condiz com o comentario',
   notas: [{ criterio: 'ATENDIMENTO', valor: 5 }],
-  anexos: [{ nomeOriginal: 'comprovante.pdf', tipoMime: 'application/pdf', tamanhoBytes: 100 }],
+  anexos: [
+    { id: 'anexo-1', nomeOriginal: 'comprovante.pdf', tipoMime: 'application/pdf', tamanhoBytes: 100 },
+  ],
   aceitePolitica: { versao: '1.0', dataAceite: '2026-01-01T00:00:00.000Z' },
   investimento: {
     tipoProduto: 'CDB',

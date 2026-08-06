@@ -16,6 +16,13 @@ export interface NotaInput {
   valor: number
 }
 
+export interface AnexoResposta {
+  id: string
+  nomeOriginal: string
+  tipoMime: string
+  tamanhoBytes: number
+}
+
 export interface AvaliacaoResposta {
   id: string
   investimentoId: string
@@ -24,7 +31,7 @@ export interface AvaliacaoResposta {
   comentario: string | null
   motivoRejeicao: string | null
   notas: NotaInput[]
-  anexos: { nomeOriginal: string; tipoMime: string; tamanhoBytes: number }[]
+  anexos: AnexoResposta[]
   aceitePolitica: { versao: string; dataAceite: string } | null
   investimento: {
     tipoProduto: string
