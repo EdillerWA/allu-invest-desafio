@@ -1,0 +1,47 @@
+@import 'tailwindcss';
+@import './shared/styles/fonts.css';
+@import './shared/styles/tokens.css';
+
+@theme inline {
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --color-background: var(--bg-page);
+  --color-foreground: var(--text-primary);
+  --color-card: var(--bg-surface);
+  --color-card-foreground: var(--text-primary);
+  --color-popover: var(--bg-surface);
+  --color-popover-foreground: var(--text-primary);
+  --color-primary: var(--bg-accent);
+  --color-primary-foreground: var(--text-on-accent);
+  --color-secondary: var(--bg-accent-dark);
+  --color-secondary-foreground: var(--text-on-accent);
+  --color-muted: var(--bg-input);
+  --color-muted-foreground: var(--text-muted);
+  --color-accent: var(--bg-accent-hover);
+  --color-accent-foreground: var(--text-on-accent);
+  --color-destructive: #b3261e;
+  --color-destructive-foreground: var(--text-on-accent);
+  --color-border: var(--border-default);
+  --color-input: var(--border-input);
+  --color-ring: var(--border-focus);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-lg);
+  --radius-full: var(--radius-full);
+
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-card);
+  --shadow-md: var(--shadow-raised);
+  --shadow-lg: var(--shadow-overlay);
+  --shadow-xl: var(--shadow-xl);
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    color: var(--text-primary);
+    background-color: var(--bg-page);
+  }
+}

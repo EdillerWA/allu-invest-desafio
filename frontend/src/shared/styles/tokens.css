@@ -1,0 +1,117 @@
+:root {
+  /* Cor · primária (verde da marca) */
+  --color-primary-50: #f5faf7;
+  --color-primary-100: #cfe6db;
+  --color-primary-200: #a9d4bf;
+  --color-primary-300: #81c2a3;
+  --color-primary-400: #59b187;
+  --color-primary-500: #418f6a;
+  --color-primary-600: #2e694d;
+  --color-primary-700: #28533e;
+  --color-primary-800: #203e30;
+  --color-primary-900: #182a22;
+
+  /* Cor · ink (texto forte / quase-preto) */
+  --color-ink-50: #f7f8f7;
+  --color-ink-100: #dce1dd;
+  --color-ink-200: #c1cac3;
+  --color-ink-300: #a6b4a9;
+  --color-ink-400: #8b9d90;
+  --color-ink-500: #718676;
+  --color-ink-600: #5a6b5e;
+  --color-ink-700: #435047;
+  --color-ink-800: #2d352f;
+  --color-ink-900: #161a17;
+
+  /* Cor · neutro (cinza de texto secundário) */
+  --color-neutral-50: #f7f7f8;
+  --color-neutral-100: #dbdee2;
+  --color-neutral-200: #c0c5cd;
+  --color-neutral-300: #a5adb7;
+  --color-neutral-400: #8a94a1;
+  --color-neutral-500: #707b8b;
+  --color-neutral-600: #5a6370;
+  --color-neutral-700: #474d56;
+  --color-neutral-800: #33373d;
+  --color-neutral-900: #1f2124;
+
+  /* Cor · sand (fundo bege claro) */
+  --color-sand-50: #faf8f5;
+  --color-sand-100: #f2eee6;
+  --color-sand-200: #e0d7c5;
+  --color-sand-300: #cec0a5;
+  --color-sand-400: #bba985;
+  --color-sand-500: #a79166;
+  --color-sand-600: #897751;
+  --color-sand-700: #685b3f;
+  --color-sand-800: #483f2d;
+  --color-sand-900: #28241a;
+
+  /* Tokens semânticos */
+  --bg-page: var(--color-sand-50);
+  --bg-surface: #ffffff;
+  --bg-input: var(--color-sand-100);
+  --bg-accent: var(--color-primary-600);
+  --bg-accent-hover: var(--color-primary-700);
+  --bg-accent-dark: var(--color-ink-900);
+  --bg-accent-dark-hover: var(--color-ink-800);
+
+  --text-primary: var(--color-ink-900);
+  --text-secondary: var(--color-neutral-600);
+  --text-muted: var(--color-neutral-400);
+  --text-accent: var(--color-primary-600);
+  --text-on-accent: #ffffff;
+  --text-placeholder: var(--color-neutral-500);
+
+  --border-default: var(--color-sand-300);
+  --border-input: var(--color-sand-300);
+  --border-focus: var(--color-primary-600);
+
+  /* Tipografia */
+  --font-family-base: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 24px;
+  --font-size-2xl: 32px;
+  --font-size-3xl: 40px;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.15;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.7;
+
+  /* Espaçamento */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Raio de borda */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-full: 999px;
+
+  /* Sombra (escala de elevação) */
+  --shadow-none: none;
+  --shadow-xs: 0 1px 2px rgba(22, 26, 23, 0.04);
+  --shadow-sm: 0 1px 3px rgba(22, 26, 23, 0.06);
+  --shadow-md: 0 4px 8px rgba(22, 26, 23, 0.08);
+  --shadow-lg: 0 8px 16px rgba(22, 26, 23, 0.1);
+  --shadow-xl: 0 16px 32px rgba(22, 26, 23, 0.12);
+
+  --shadow-card: var(--shadow-sm);
+  --shadow-raised: var(--shadow-md);
+  --shadow-overlay: var(--shadow-lg);
+  --shadow-focus: 0 0 0 3px rgba(46, 105, 77, 0.25);
+}
